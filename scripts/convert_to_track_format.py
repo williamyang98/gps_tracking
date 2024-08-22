@@ -21,8 +21,8 @@ def convert_to_trackpoint(d):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", default="gps_data.csv", type=str)
-    parser.add_argument("--output", default="gps_visualiser_track.csv", type=str)
+    parser.add_argument("--input", default="./data/gps_data.csv", type=str)
+    parser.add_argument("--output", default="./data/gps_visualiser_track.csv", type=str)
     parser.add_argument("--user-id", default=0, type=int)
     args = parser.parse_args()
 

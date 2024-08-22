@@ -3,10 +3,6 @@
 2. Create Firebase datastore
     - [Datastore](https://console.cloud.google.com/datastore/databases)
     - Make sure ```Database ID``` is ```(default)``` so you can use free tier.
-3. Create Google cloud function
-    - [Cloud functions](https://console.cloud.google.com/functions)
-    - Click on ```Create function``` and copy and paste ```test_google_function.py```.
-    - Deploy serverless cloud function.
 
 # Local development
 ## Setup gcloud
@@ -20,17 +16,17 @@
 3. Install requirements: ```pip install -r requirements.txt```.
 
 ## Running commands
-This requires setting up the Firebase datastore in Google cloud first.
-
-| Descripton | Command |
-| --- | --- |
-| Get project id | ```gcloud config get-value project``` |
-| Test serverless function locally | ```functions-framework --target post_gps --source ./test_google_function.py --debug``` |
-| Test endpoint locally | ```python ./test_endpoint.py --local``` |
-| Download and export datastore | ```python ./export_datastore.py``` |
-| Convert to track format | ```python ./convert_to_track_format.py``` |
+- This requires setting up the Firebase datastore in Google cloud first.
+- Refer to ```/cloud_functions``` and ```/scripts``` for commands.
 
 # Plotting track
+## Download track data
+- Option 1: [Download from server (attachment)](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-track?download=gps_visualiser_track.csv&max_rows=128&user_id=0)
+- Option 2: Download locally
+    1. Download datastore as csv: ```python ./scripts/export_datastore.py```.
+    2. Convert to track format: ```python ./scripts/convert_to_track_format.py```.
+
+## Upload track data
 1. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
 2. Make sure there are no restrictions to referall URL or usage type.
 4. Upload converted track csv to [GPS_Visualiser](https://www.gpsvisualizer.com/map_input?form=html&format=google).
