@@ -1,6 +1,7 @@
 package com.example.gps_tracker
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,11 +10,13 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.graphics.Color
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
@@ -60,7 +63,11 @@ class BackgroundService: Service() {
         requestQueue = Volley.newRequestQueue(this);
         Log.d(TAG, "Creating service");
         var notification = createNotification();
-        this.startForeground(1, notification);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            this.startForeground(FOREGROUND_SERVICE_TYPE_LOCATION, notification);
+        } else {
+            this.startForeground(1, notification);
+        }
         gBackgroundService = this;
     }
 
@@ -91,7 +98,7 @@ class BackgroundService: Service() {
             return;
         }
         val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
-        val user_id: Int = 0;
+        val user_id: Int = 2;
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putInt(user_id);
@@ -144,6 +151,17 @@ class BackgroundService: Service() {
         return START_STICKY;
     }
 
+    override fun onTaskRemoved(rootIntent: Intent) {
+        val restartServiceIntent = Intent(applicationContext, BackgroundService::class.java).also {
+            it.setPackage(packageName)
+        };
+        val restartServicePendingIntent: PendingIntent = PendingIntent.getService(this, 1, restartServiceIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE);
+        applicationContext.getSystemService(Context.ALARM_SERVICE);
+        val alarmService: AlarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
+        alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
+    }
+
     override fun onDestroy() {
         super.onDestroy();
         Log.d(TAG, "Service has been destroyed");
@@ -173,7 +191,7 @@ class BackgroundService: Service() {
                     refreshLocation();
                 }
                 delay(10 * 60 * 1000);
-                //delay(1 * 1 * 1000);
+                //delay(10 * 1 * 1000);
             }
             Log.d(TAG, "Background service loop has closed");
         }

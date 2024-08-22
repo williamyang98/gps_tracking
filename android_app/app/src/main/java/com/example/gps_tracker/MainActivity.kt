@@ -51,8 +51,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
-        actionOnService(BackgroundServiceActions.START);
+
         this.renderView();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.FOREGROUND_SERVICE_LOCATION), 1);
+            } else {
+                actionOnService(BackgroundServiceActions.START);
+            }
+        } else {
+            actionOnService(BackgroundServiceActions.START);
+        }
     }
 
     private fun actionOnService(action: BackgroundServiceActions) {
@@ -166,6 +175,26 @@ class MainActivity : ComponentActivity() {
                         Text(text="Permissions", style=MaterialTheme.typography.headlineSmall)
                         Row {
                             LazyColumn {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                    item {
+                                        Row {
+                                            RadioButton(
+                                                selected = (ActivityCompat.checkSelfPermission(
+                                                    self,
+                                                    Manifest.permission.FOREGROUND_SERVICE_LOCATION
+                                                ) == PackageManager.PERMISSION_GRANTED),
+                                                onClick = {
+                                                    ActivityCompat.requestPermissions(
+                                                        self,
+                                                        arrayOf(Manifest.permission.FOREGROUND_SERVICE_LOCATION),
+                                                        1
+                                                    )
+                                                },
+                                            )
+                                            Text(text = "Foreground service location")
+                                        }
+                                    }
+                                }
                                 item {
                                     Row {
                                         RadioButton(
