@@ -90,7 +90,7 @@ class BackgroundService: Service() {
         if (location == null || locationTimestamp == null) {
             return;
         }
-        val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.UTC).toEpochSecond();
+        val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
         val user_id: Int = 0;
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
