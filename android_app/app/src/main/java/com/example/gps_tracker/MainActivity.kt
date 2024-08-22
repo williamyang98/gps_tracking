@@ -1,8 +1,10 @@
 package com.example.gps_tracker
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,10 +14,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,111 +44,32 @@ import java.nio.ByteOrder
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-class BinaryRequest(
-    method: Int, url: String,
-    private val requestBody: ByteArray,
-    private val statusListener: Response.Listener<Int>,
-    successListener: Response.Listener<String>,
-    errorListener: Response.ErrorListener
-): StringRequest(method, url, successListener, errorListener) {
-    override fun getBody(): ByteArray {
-        return requestBody;
-    }
-    override fun getBodyContentType(): String {
-        return "application/octet-stream";
-    }
-    override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
-        statusListener.onResponse(response.statusCode);
-        return super.parseNetworkResponse(response);
-    }
-}
+private const val TAG: String = "main_activity";
 
 class MainActivity : ComponentActivity() {
-    private lateinit var fusedLocationClient: FusedLocationProviderClient;
-    private lateinit var requestQueue: RequestQueue;
-    private var locationTimestamp: LocalDateTime? = null;
-    private var location: Location? = null;
-    private var statusCode: Int? = null;
-    private var responseBody: String? = null;
-    private var responseTimestamp: LocalDateTime? = null;
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        requestQueue = Volley.newRequestQueue(this);
-        this.refreshLocation();
+        super.onCreate(savedInstanceState);
+        actionOnService(BackgroundServiceActions.START);
         this.renderView();
     }
 
-    private fun refreshLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1);
-        }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1);
-        }
-
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
-            if (location != null) {
-                this.location = location;
-                this.locationTimestamp = LocalDateTime.now();
-                this.postGPS();
-            } else {
-                this.location = null;
-                this.locationTimestamp = LocalDateTime.now();
-                this.postGPS();
-            }
-            this.renderView();
-        }
-    }
-
-    private fun postGPS() {
-        val location = this.location;
-        val locationTimestamp = this.locationTimestamp;
-        if (location == null || locationTimestamp == null) {
+    private fun actionOnService(action: BackgroundServiceActions) {
+        if (action == BackgroundServiceActions.STOP) {
+            gBackgroundService?.stopService();
             return;
         }
-        val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.UTC).toEpochSecond();
-        val user_id: Int = 0;
-        val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        buffer.putInt(user_id);
-        buffer.putInt(unixTimeStamp.toInt());
-        buffer.putDouble(location.latitude);
-        buffer.putDouble(location.longitude);
-        buffer.putDouble(location.altitude);
-
-        val url = "https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/post-gps";
-        var request = BinaryRequest(
-            Request.Method.POST, url, buffer.array(),
-            { statusCode ->
-                this.statusCode = statusCode;
-                this.responseTimestamp = LocalDateTime.now();
-                this.renderView();
-            },
-            { response ->
-                this.responseBody = response;
-                this.responseTimestamp = LocalDateTime.now();
-                this.renderView();
-            },
-            { error ->
-                error.networkResponse?.let { response ->
-                    this.statusCode = response.statusCode;
-                    this.responseBody = String(response.data, Charsets.UTF_8);
-                    this.responseTimestamp = LocalDateTime.now();
-                    this.renderView();
-                } ?: run {
-                    this.statusCode = null;
-                    this.responseBody = error.message;
-                    this.responseTimestamp = LocalDateTime.now();
-                    this.renderView();
-                }
-            }
-        );
-        requestQueue.add(request);
+        Intent(this, BackgroundService::class.java).also {
+            it.action = action.name
+            Log.d(TAG, "Starting the service in >=26 Mode")
+            startForegroundService(it)
+            renderView();
+        }
     }
 
     private fun renderView() {
+        var self = this;
         var col0 = 0.3f;
         var col1 = 0.7f;
         setContent {
@@ -152,61 +79,145 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Column {
-                        Text(text="GPS Location", style=MaterialTheme.typography.headlineSmall)
-                        Button(onClick = { refreshLocation() }) {
-                            Text(text="Refresh location")
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(1.dp)
+                    ) {
+                        Button(onClick = { renderView() }) {
+                            Text("Refresh view");
+                        }
+                        Text(text="Background Service", style=MaterialTheme.typography.headlineSmall)
+                        Row {
+                            RadioButton(
+                                selected=(gBackgroundService != null),
+                                onClick={
+                                    if (gBackgroundService == null) {
+                                        actionOnService(BackgroundServiceActions.START);
+                                    } else {
+                                        actionOnService(BackgroundServiceActions.STOP);
+                                    }
+                                },
+                            )
+                            Text(text="Service running")
+                        }
+                        Row {
+                            Text(text="GPS Location", style=MaterialTheme.typography.headlineSmall)
+                            Button(onClick = { gBackgroundService?.refreshLocation() }) {
+                                Text(text="Refresh location")
+                            }
                         }
                         Row {
                             LazyColumn {
                                 item {
                                     Row {
                                         TableCell(text="Time", weight=col0)
-                                        TableCell(text="$locationTimestamp", weight=col1)
+                                        TableCell(text="${gBackgroundService?.locationTimestamp}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Longitude", weight=col0)
-                                        TableCell(text="${location?.longitude}", weight=col1)
+                                        TableCell(text="${gBackgroundService?.location?.longitude}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Latitude", weight=col0)
-                                        TableCell(text="${location?.latitude}", weight=col1)
+                                        TableCell(text="${gBackgroundService?.location?.latitude}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Altitude", weight=col0)
-                                        TableCell(text="${location?.altitude}", weight=col1)
+                                        TableCell(text="${gBackgroundService?.location?.altitude}", weight=col1)
                                     }
                                 }
                             }
                         }
-                        Text(text="Server Status", style=MaterialTheme.typography.headlineSmall)
-                        Button(onClick = { postGPS() }) {
-                            Text(text="Submit GPS")
+                        Row {
+                            Text(text="Server Status", style=MaterialTheme.typography.headlineSmall)
+                            Button(onClick = { gBackgroundService?.postGPS() }) {
+                                Text(text="Submit GPS")
+                            }
                         }
                         Row {
                             LazyColumn {
                                 item {
                                     Row {
                                         TableCell(text="Time", weight=col0)
-                                        TableCell(text="$responseTimestamp", weight=col1)
+                                        TableCell(text="${gBackgroundService?.responseTimestamp}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Status Code", weight=col0)
-                                        TableCell(text="$statusCode", weight=col1)
+                                        TableCell(text="${gBackgroundService?.statusCode}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Response", weight=col0)
-                                        TableCell(text="$responseBody", weight=col1)
+                                        TableCell(text="${gBackgroundService?.responseBody}", weight=col1)
+                                    }
+                                }
+                            }
+                        }
+                        Text(text="Permissions", style=MaterialTheme.typography.headlineSmall)
+                        Row {
+                            LazyColumn {
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1) },
+                                        )
+                                        Text(text="Coarse location")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1) },
+                                        )
+                                        Text(text="Precise location")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.INTERNET), 1) },
+                                        )
+                                        Text(text="Internet")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.RECEIVE_BOOT_COMPLETED) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.RECEIVE_BOOT_COMPLETED), 1) },
+                                        )
+                                        Text(text="Receive boot complete")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.FOREGROUND_SERVICE) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.FOREGROUND_SERVICE), 1) },
+                                        )
+                                        Text(text="Foreground service")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.WAKE_LOCK) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.WAKE_LOCK), 1) },
+                                        )
+                                        Text(text="Wake lock")
                                     }
                                 }
                             }
@@ -215,11 +226,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    @Composable
-    private fun getView() {
-
     }
 }
 
