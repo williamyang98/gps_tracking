@@ -194,8 +194,8 @@ class BackgroundService: Service() {
                 launch(Dispatchers.IO) {
                     refreshLocation();
                 }
-                // delay(10 * 60 * 1000);
-                delay(1 * 60 * 1000);
+                delay(10 * 60 * 1000);
+                // delay(1 * 60 * 1000);
             }
             Log.d(TAG, "Background service loop has closed");
         }
