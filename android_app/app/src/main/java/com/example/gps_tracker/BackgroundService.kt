@@ -67,9 +67,9 @@ class BackgroundService: Service() {
         } else {
             this.startForeground(1, notification);
         }
-        gBackgroundService = this;
         Log.d(TAG, "Created service");
         Toast.makeText(this, "Background GPS service has been created", Toast.LENGTH_SHORT).show();
+        gBackgroundService = this;
     }
 
     override fun onDestroy() {
@@ -106,10 +106,10 @@ class BackgroundService: Service() {
             return;
         }
         val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
-        val user_id: Int = 2;
+        val userId: Int = 0;
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
-        buffer.putInt(user_id);
+        buffer.putInt(userId);
         buffer.putInt(unixTimeStamp.toInt());
         buffer.putDouble(location.latitude);
         buffer.putDouble(location.longitude);
@@ -217,7 +217,6 @@ class BackgroundService: Service() {
         }
         setServiceState(this, ServiceState.STOPPED);
         isServiceStarted = false;
-        gBackgroundService = null;
     }
 
     private fun createNotification(): Notification {

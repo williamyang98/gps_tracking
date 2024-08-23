@@ -3,7 +3,6 @@ package com.example.gps_tracker
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -17,8 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -29,20 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
-import com.android.volley.NetworkResponse
-import com.android.volley.Request
-import com.android.volley.RequestQueue
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
 import com.example.gps_tracker.ui.theme.Gps_trackerTheme
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 private const val TAG: String = "main_activity";
 
@@ -57,16 +41,16 @@ class MainActivity : ComponentActivity() {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.FOREGROUND_SERVICE_LOCATION), 1);
             } else {
-                actionOnService(BackgroundServiceActions.START);
+                actionOnService(gBackgroundService, BackgroundServiceActions.START);
             }
         } else {
-            actionOnService(BackgroundServiceActions.START);
+            actionOnService(gBackgroundService, BackgroundServiceActions.START);
         }
     }
 
-    private fun actionOnService(action: BackgroundServiceActions) {
+    private fun actionOnService(service: BackgroundService?, action: BackgroundServiceActions) {
         if (action == BackgroundServiceActions.STOP) {
-            gBackgroundService?.stopService();
+            service?.stopService();
             return;
         }
         Intent(this, BackgroundService::class.java).also {
@@ -78,6 +62,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderView() {
+        val backgroundService = gBackgroundService;
         val self = this;
         val col0 = 0.3f;
         val col1 = 0.7f;
@@ -99,12 +84,12 @@ class MainActivity : ComponentActivity() {
                         Text(text="Background Service", style=MaterialTheme.typography.headlineSmall)
                         Row {
                             RadioButton(
-                                selected=(gBackgroundService != null),
+                                selected=(backgroundService != null),
                                 onClick={
-                                    if (gBackgroundService == null) {
-                                        actionOnService(BackgroundServiceActions.START);
+                                    if (backgroundService == null) {
+                                        actionOnService(backgroundService, BackgroundServiceActions.START);
                                     } else {
-                                        actionOnService(BackgroundServiceActions.STOP);
+                                        actionOnService(backgroundService, BackgroundServiceActions.STOP);
                                     }
                                 },
                             )
@@ -112,7 +97,7 @@ class MainActivity : ComponentActivity() {
                         }
                         Row {
                             Text(text="GPS Location", style=MaterialTheme.typography.headlineSmall)
-                            Button(onClick = { gBackgroundService?.refreshLocation() }) {
+                            Button(onClick = { backgroundService?.refreshLocation() }) {
                                 Text(text="Refresh location")
                             }
                         }
@@ -121,32 +106,32 @@ class MainActivity : ComponentActivity() {
                                 item {
                                     Row {
                                         TableCell(text="Time", weight=col0)
-                                        TableCell(text="${gBackgroundService?.locationTimestamp}", weight=col1)
+                                        TableCell(text="${backgroundService?.locationTimestamp}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Longitude", weight=col0)
-                                        TableCell(text="${gBackgroundService?.location?.longitude}", weight=col1)
+                                        TableCell(text="${backgroundService?.location?.longitude}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Latitude", weight=col0)
-                                        TableCell(text="${gBackgroundService?.location?.latitude}", weight=col1)
+                                        TableCell(text="${backgroundService?.location?.latitude}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Altitude", weight=col0)
-                                        TableCell(text="${gBackgroundService?.location?.altitude}", weight=col1)
+                                        TableCell(text="${backgroundService?.location?.altitude}", weight=col1)
                                     }
                                 }
                             }
                         }
                         Row {
                             Text(text="Server Status", style=MaterialTheme.typography.headlineSmall)
-                            Button(onClick = { gBackgroundService?.postGPS() }) {
+                            Button(onClick = { backgroundService?.postGPS() }) {
                                 Text(text="Submit GPS")
                             }
                         }
@@ -155,19 +140,19 @@ class MainActivity : ComponentActivity() {
                                 item {
                                     Row {
                                         TableCell(text="Time", weight=col0)
-                                        TableCell(text="${gBackgroundService?.responseTimestamp}", weight=col1)
+                                        TableCell(text="${backgroundService?.responseTimestamp}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Status Code", weight=col0)
-                                        TableCell(text="${gBackgroundService?.statusCode}", weight=col1)
+                                        TableCell(text="${backgroundService?.statusCode}", weight=col1)
                                     }
                                 }
                                 item {
                                     Row {
                                         TableCell(text="Response", weight=col0)
-                                        TableCell(text="${gBackgroundService?.responseBody}", weight=col1)
+                                        TableCell(text="${backgroundService?.responseBody}", weight=col1)
                                     }
                                 }
                             }
