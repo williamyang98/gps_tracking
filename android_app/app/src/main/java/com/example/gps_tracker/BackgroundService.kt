@@ -61,7 +61,6 @@ class BackgroundService: Service() {
         super.onCreate();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         requestQueue = Volley.newRequestQueue(this);
-        Log.d(TAG, "Creating service");
         val notification = createNotification();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             this.startForeground(FOREGROUND_SERVICE_TYPE_LOCATION, notification);
@@ -69,6 +68,15 @@ class BackgroundService: Service() {
             this.startForeground(1, notification);
         }
         gBackgroundService = this;
+        Log.d(TAG, "Created service");
+        Toast.makeText(this, "Background GPS service has been created", Toast.LENGTH_SHORT).show();
+    }
+
+    override fun onDestroy() {
+        super.onDestroy();
+        gBackgroundService = null;
+        Log.d(TAG, "Service has been destroyed");
+        Toast.makeText(this, "Background GPS service has been destroyed", Toast.LENGTH_SHORT).show();
     }
 
     fun refreshLocation() {
@@ -164,12 +172,6 @@ class BackgroundService: Service() {
         Toast.makeText(this, "Task was removed, attempting to restart", Toast.LENGTH_SHORT).show();
     }
 
-    override fun onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "Service has been destroyed");
-        Toast.makeText(this, "Background GPS service has been destroyed", Toast.LENGTH_SHORT).show();
-    }
-
     private fun startService() {
         if (this.isServiceStarted) {
             return;
@@ -193,7 +195,7 @@ class BackgroundService: Service() {
                     refreshLocation();
                 }
                 // delay(10 * 60 * 1000);
-                delay(10 * 1 * 1000);
+                delay(1 * 60 * 1000);
             }
             Log.d(TAG, "Background service loop has closed");
         }
