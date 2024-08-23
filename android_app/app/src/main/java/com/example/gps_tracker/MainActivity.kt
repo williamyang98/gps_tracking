@@ -1,11 +1,9 @@
 package com.example.gps_tracker
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.border
@@ -41,28 +39,15 @@ class MainActivity : ComponentActivity() {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.FOREGROUND_SERVICE_LOCATION), 1);
             } else {
-                actionOnService(gBackgroundService, BackgroundServiceActions.START);
+                BackgroundService.start(this);
             }
         } else {
-            actionOnService(gBackgroundService, BackgroundServiceActions.START);
-        }
-    }
-
-    private fun actionOnService(service: BackgroundService?, action: BackgroundServiceActions) {
-        if (action == BackgroundServiceActions.STOP) {
-            service?.stopService();
-            return;
-        }
-        Intent(this, BackgroundService::class.java).also {
-            it.action = action.name
-            Log.d(TAG, "Starting the service in >=26 Mode")
-            startForegroundService(it)
-            renderView();
+            BackgroundService.start(this);
         }
     }
 
     private fun renderView() {
-        val backgroundService = gBackgroundService;
+        val backgroundService = BackgroundService.getInstance();
         val self = this;
         val col0 = 0.3f;
         val col1 = 0.7f;
@@ -84,12 +69,11 @@ class MainActivity : ComponentActivity() {
                         Text(text="Background Service", style=MaterialTheme.typography.headlineSmall)
                         Row {
                             RadioButton(
-                                selected=(backgroundService != null),
+                                selected=(BackgroundService.getIsStarted()),
                                 onClick={
-                                    if (backgroundService == null) {
-                                        actionOnService(backgroundService, BackgroundServiceActions.START);
-                                    } else {
-                                        actionOnService(backgroundService, BackgroundServiceActions.STOP);
+                                    if (!BackgroundService.getIsStarted()) {
+                                        BackgroundService.start(self);
+                                        self.renderView();
                                     }
                                 },
                             )
@@ -188,6 +172,17 @@ class MainActivity : ComponentActivity() {
                                                 onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1) },
                                             )
                                             Text(text="Post notifications")
+                                        }
+                                    }
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    item {
+                                        Row {
+                                            RadioButton(
+                                                selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED),
+                                                onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 1) },
+                                            )
+                                            Text(text="Background location")
                                         }
                                     }
                                 }

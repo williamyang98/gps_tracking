@@ -15,7 +15,6 @@ import android.graphics.Color
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
-import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
@@ -29,23 +28,16 @@ import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 private const val TAG: String = "background_gps_service";
 
-enum class BackgroundServiceActions {
-    START,
-    STOP
-}
-
-var gBackgroundService: BackgroundService? = null;
 class BackgroundService: Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient;
     private lateinit var requestQueue: RequestQueue;
@@ -54,8 +46,31 @@ class BackgroundService: Service() {
     var statusCode: Int? = null;
     var responseBody: String? = null;
     var responseTimestamp: LocalDateTime? = null;
-    var wakeLock: PowerManager.WakeLock? = null;
-    var isServiceStarted = false;
+
+    companion object {
+        @Volatile private var instance: BackgroundService? = null;
+        @Volatile private var pendingIntent: PendingIntent? = null;
+
+        fun getInstance(): BackgroundService? { return instance; }
+        fun getIsStarted(): Boolean { return pendingIntent != null; }
+
+        fun start(context: Context, interval: Duration = 10.toDuration(DurationUnit.MINUTES)) {
+            if (pendingIntent == null) {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
+                val intent = Intent(context, BackgroundService::class.java);
+                pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+                Log.d(TAG, "Starting repeating background service through alarm manager");
+                alarmManager.setRepeating(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime(),
+                    interval.inWholeMilliseconds,
+                    pendingIntent
+                );
+            } else {
+                Log.e(TAG, "Could not start repeating background service since it already exists");
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate();
@@ -69,12 +84,12 @@ class BackgroundService: Service() {
         }
         Log.d(TAG, "Created service");
         Toast.makeText(this, "Background GPS service has been created", Toast.LENGTH_SHORT).show();
-        gBackgroundService = this;
+        instance = this;
     }
 
     override fun onDestroy() {
         super.onDestroy();
-        gBackgroundService = null;
+        instance = null;
         Log.d(TAG, "Service has been destroyed");
         Toast.makeText(this, "Background GPS service has been destroyed", Toast.LENGTH_SHORT).show();
     }
@@ -90,11 +105,12 @@ class BackgroundService: Service() {
             if (location != null) {
                 this.location = location;
                 this.locationTimestamp = LocalDateTime.now();
+                Log.d(TAG, "Refreshed GPS location");
                 this.postGPS();
             } else {
                 this.location = null;
                 this.locationTimestamp = LocalDateTime.now();
-                this.postGPS();
+                Log.e(TAG, "Failed to get GPS location");
             }
         }
     }
@@ -106,7 +122,7 @@ class BackgroundService: Service() {
             return;
         }
         val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
-        val userId: Int = 0;
+        val userId: Int = 3;
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putInt(userId);
@@ -125,6 +141,7 @@ class BackgroundService: Service() {
             { response ->
                 this.responseBody = response;
                 this.responseTimestamp = LocalDateTime.now();
+                Log.d(TAG, "Post GPS succeeded");
             },
             { error ->
                 error.networkResponse?.let { response ->
@@ -136,6 +153,7 @@ class BackgroundService: Service() {
                     this.responseBody = error.message;
                     this.responseTimestamp = LocalDateTime.now();
                 }
+                Log.e(TAG, "Post GPS failed: ${error.networkResponse}");
             }
         );
         requestQueue.add(request);
@@ -145,78 +163,9 @@ class BackgroundService: Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent != null) {
-            val action = intent.action;
-            Log.d(TAG, "Using background service with action $action");
-            when (action) {
-                BackgroundServiceActions.START.name -> startService()
-                BackgroundServiceActions.STOP.name -> stopService()
-                else -> Log.e(TAG, "Unhandled start command $action")
-            }
-        } else {
-            Log.d(TAG, "Started with null intent, service is probably being restarted");
-        }
+        Log.d(TAG, "On start command: $intent");
+        refreshLocation();
         return START_STICKY;
-    }
-
-    override fun onTaskRemoved(rootIntent: Intent) {
-        val restartServiceIntent = Intent(applicationContext, BackgroundService::class.java).also {
-            it.setPackage(packageName)
-        };
-        val restartServicePendingIntent = PendingIntent.getService(this, 1, restartServiceIntent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE);
-        applicationContext.getSystemService(Context.ALARM_SERVICE);
-        val alarmService: AlarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
-        alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
-        Log.d(TAG, "Task was removed, attempting to restart");
-        Toast.makeText(this, "Task was removed, attempting to restart", Toast.LENGTH_SHORT).show();
-    }
-
-    private fun startService() {
-        if (this.isServiceStarted) {
-            return;
-        }
-        this.isServiceStarted = true;
-        Log.d(TAG, "Attempting to start background service");
-        Toast.makeText(this, "Background GPS service is trying to start", Toast.LENGTH_SHORT).show();
-
-        // avoid being disabled by doze mode
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager;
-        wakeLock = powerManager.run {
-            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSTrackingService::wakelock").apply {
-                acquire()
-            }
-        }
-
-        // start infinite loop
-        GlobalScope.launch(Dispatchers.IO) {
-            while (isServiceStarted) {
-                launch(Dispatchers.IO) {
-                    refreshLocation();
-                }
-                delay(10 * 60 * 1000);
-                // delay(1 * 60 * 1000);
-            }
-            Log.d(TAG, "Background service loop has closed");
-        }
-    }
-
-    fun stopService() {
-        Log.d(TAG, "Stopping background service");
-        Toast.makeText(this, "GPS background service stopping", Toast.LENGTH_SHORT).show();
-        try {
-            wakeLock?.let {
-                if (it.isHeld) {
-                    it.release();
-                }
-            }
-            stopForeground(true);
-            stopSelf();
-        } catch (ex: Exception) {
-            Log.d(TAG, "Service stopped without being started: ${ex.message}")
-        }
-        setServiceState(this, ServiceState.STOPPED);
-        isServiceStarted = false;
     }
 
     private fun createNotification(): Notification {
@@ -229,13 +178,12 @@ class BackgroundService: Service() {
         ).let {
             it.description = "GPS tracking service channel";
             it.enableLights(true);
-            it.lightColor = Color.RED;
+            it.lightColor = Color.WHITE;
             it.enableVibration(false);
             it.vibrationPattern = null;
             it
         }
         notificationManager.createNotificationChannel(channel);
-
         val pendingIntent: PendingIntent = Intent(this, MainActivity::class.java).let {
             notificationIntent -> PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         }
