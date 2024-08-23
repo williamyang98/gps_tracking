@@ -58,14 +58,15 @@ class BackgroundService: Service() {
             if (pendingIntent == null) {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
                 val intent = Intent(context, BackgroundService::class.java);
-                pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-                Log.d(TAG, "Starting repeating background service through alarm manager");
-                alarmManager.setRepeating(
+                pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);
+                alarmManager.setInexactRepeating(
                     AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime(),
                     interval.inWholeMilliseconds,
                     pendingIntent
                 );
+                Log.d(TAG, "Starting repeating background service through alarm manager");
+                Toast.makeText(context, "Starting repeating background service", Toast.LENGTH_SHORT).show();
             } else {
                 Log.e(TAG, "Could not start repeating background service since it already exists");
             }

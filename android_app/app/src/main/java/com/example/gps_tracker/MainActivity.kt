@@ -189,6 +189,15 @@ class MainActivity : ComponentActivity() {
                                 item {
                                     Row {
                                         RadioButton(
+                                            selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.SET_ALARM) == PackageManager.PERMISSION_GRANTED),
+                                            onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.SET_ALARM), 1) },
+                                        )
+                                        Text(text="Set Alarm")
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        RadioButton(
                                             selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED),
                                             onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1) },
                                         )
