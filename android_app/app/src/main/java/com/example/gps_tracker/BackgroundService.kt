@@ -59,11 +59,23 @@ class BackgroundService: Service() {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
                 val intent = Intent(context, BackgroundService::class.java);
                 pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExact(
+                            AlarmManager.RTC_WAKEUP,
+                            System.currentTimeMillis(),
+                            pendingIntent,
+                        );
+                        Log.d(TAG, "Started initial exact alarm");
+                    } else {
+                        Log.e(TAG, "Failed to start initial exact alarm");
+                    }
+                }
                 alarmManager.setInexactRepeating(
-                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    SystemClock.elapsedRealtime(),
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + interval.inWholeMilliseconds,
                     interval.inWholeMilliseconds,
-                    pendingIntent
+                    pendingIntent,
                 );
                 Log.d(TAG, "Starting repeating background service through alarm manager");
                 Toast.makeText(context, "Starting repeating background service", Toast.LENGTH_SHORT).show();

@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         Row {
-                            LazyColumn {
+                            LazyColumn(modifier=Modifier.fillMaxWidth()) {
                                 item {
                                     Row {
                                         TableCell(text="Time", weight=col0)
@@ -193,6 +193,17 @@ class MainActivity : ComponentActivity() {
                                             onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.SET_ALARM), 1) },
                                         )
                                         Text(text="Set Alarm")
+                                    }
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    item {
+                                        Row {
+                                            RadioButton(
+                                                selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.SCHEDULE_EXACT_ALARM) == PackageManager.PERMISSION_GRANTED),
+                                                onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.SCHEDULE_EXACT_ALARM), 1) },
+                                            )
+                                            Text(text="Schedule exact Alarm")
+                                        }
                                     }
                                 }
                                 item {
