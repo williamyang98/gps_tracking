@@ -62,8 +62,8 @@ class BackgroundService: Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         requestQueue = Volley.newRequestQueue(this);
         Log.d(TAG, "Creating service");
-        var notification = createNotification();
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        val notification = createNotification();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             this.startForeground(FOREGROUND_SERVICE_TYPE_LOCATION, notification);
         } else {
             this.startForeground(1, notification);
@@ -108,7 +108,7 @@ class BackgroundService: Service() {
         buffer.putDouble(location.altitude);
 
         val url = "https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/post-gps";
-        var request = BinaryRequest(
+        val request = BinaryRequest(
             Request.Method.POST, url, buffer.array(),
             { statusCode ->
                 this.statusCode = statusCode;
@@ -155,11 +155,13 @@ class BackgroundService: Service() {
         val restartServiceIntent = Intent(applicationContext, BackgroundService::class.java).also {
             it.setPackage(packageName)
         };
-        val restartServicePendingIntent: PendingIntent = PendingIntent.getService(this, 1, restartServiceIntent,
+        val restartServicePendingIntent = PendingIntent.getService(this, 1, restartServiceIntent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE);
         applicationContext.getSystemService(Context.ALARM_SERVICE);
         val alarmService: AlarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
         alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
+        Log.d(TAG, "Task was removed, attempting to restart");
+        Toast.makeText(this, "Task was removed, attempting to restart", Toast.LENGTH_SHORT).show();
     }
 
     override fun onDestroy() {
@@ -177,7 +179,7 @@ class BackgroundService: Service() {
         Toast.makeText(this, "Background GPS service is trying to start", Toast.LENGTH_SHORT).show();
 
         // avoid being disabled by doze mode
-        var powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager;
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager;
         wakeLock = powerManager.run {
             newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSTrackingService::wakelock").apply {
                 acquire()
@@ -190,8 +192,8 @@ class BackgroundService: Service() {
                 launch(Dispatchers.IO) {
                     refreshLocation();
                 }
-                delay(10 * 60 * 1000);
-                //delay(10 * 1 * 1000);
+                // delay(10 * 60 * 1000);
+                delay(10 * 1 * 1000);
             }
             Log.d(TAG, "Background service loop has closed");
         }
@@ -224,11 +226,11 @@ class BackgroundService: Service() {
             "GPS tracking notifications channel",
             NotificationManager.IMPORTANCE_HIGH
         ).let {
-            it.description = "GPS tracking service channel"
-            it.enableLights(true)
-            it.lightColor = Color.RED
-            it.enableVibration(true)
-            it.vibrationPattern = longArrayOf(100, 200, 300, 400, 500, 400, 300, 200, 400)
+            it.description = "GPS tracking service channel";
+            it.enableLights(true);
+            it.lightColor = Color.RED;
+            it.enableVibration(false);
+            it.vibrationPattern = null;
             it
         }
         notificationManager.createNotificationChannel(channel);

@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState);
 
         this.renderView();
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.FOREGROUND_SERVICE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.FOREGROUND_SERVICE_LOCATION), 1);
             } else {
@@ -78,9 +78,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderView() {
-        var self = this;
-        var col0 = 0.3f;
-        var col1 = 0.7f;
+        val self = this;
+        val col0 = 0.3f;
+        val col1 = 0.7f;
         setContent {
             Gps_trackerTheme {
                 // A surface container using the 'background' color from the theme
@@ -192,6 +192,17 @@ class MainActivity : ComponentActivity() {
                                                 },
                                             )
                                             Text(text = "Foreground service location")
+                                        }
+                                    }
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    item {
+                                        Row {
+                                            RadioButton(
+                                                selected=(ActivityCompat.checkSelfPermission(self, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED),
+                                                onClick={ ActivityCompat.requestPermissions(self, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1) },
+                                            )
+                                            Text(text="Post notifications")
                                         }
                                     }
                                 }
