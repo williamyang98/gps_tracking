@@ -1,5 +1,5 @@
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from google.cloud import datastore
 from http import HTTPStatus
 import flask
@@ -16,8 +16,8 @@ def datastore_to_gps_data(entry):
     return GPS_Data(user_id, unix_time, latitude, longitude, altitude)
 
 TRACK_HEADERS = ("type", "name", "latitude", "longitude", "alt")
-def convert_to_trackpoint(d):
-    time = datetime.fromtimestamp(d.unix_time)
+def convert_to_trackpoint(d, tz):
+    time = datetime.fromtimestamp(d.unix_time, tz=tz)
     # time format: yyyy-mm-dd hh:mm:ss
     time_str = time.strftime("%Y-%m-%d %H:%M:%S")
     return ("T", time_str, d.latitude, d.longitude, d.altitude)
@@ -45,6 +45,14 @@ def get_track(req: flask.Request) -> flask.typing.ResponseReturnValue:
         except:
             return "Max rows must be an integer", HTTPStatus.BAD_REQUEST
 
+    tz = req.args.get("timezone", None)
+    if tz != None:
+        try:
+            tz = float(tz)
+            tz = timezone(timedelta(hours=tz))
+        except Exception as ex:
+            return f"Invalid timezone: {ex}", HTTPStatus.BAD_REQUEST
+
     client = datastore.Client("gps-tracking-433211")
     query = client.query(kind="gps")
     # For some reason this breaks the order sort
@@ -59,7 +67,7 @@ def get_track(req: flask.Request) -> flask.typing.ResponseReturnValue:
         for row in results:
             data = datastore_to_gps_data(row)
             if data.user_id == user_id:
-                track = convert_to_trackpoint(data)
+                track = convert_to_trackpoint(data, tz)
                 yield ','.join(map(str, track))
                 yield '\n'
                 total_rows += 1
