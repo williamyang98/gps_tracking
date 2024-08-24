@@ -98,8 +98,8 @@ class GpsSender private constructor() {
         if (location == null || locationTimestamp == null) {
             return;
         }
-        val pref = PreferenceManager.getDefaultSharedPreferences(context.parentContext.applicationContext);
-        val userId = pref.getInt("user_id", 0);
+        val settings = Settings(context.parentContext);
+        val userId = settings.userId;
         val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);

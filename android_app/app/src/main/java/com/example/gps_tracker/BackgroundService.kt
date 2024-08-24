@@ -1,6 +1,7 @@
 package com.example.gps_tracker
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -41,6 +42,7 @@ private const val TAG: String = "background_gps_service";
 
 class BackgroundService: Service() {
     companion object {
+        @SuppressLint("StaticFieldLeak")
         private var instance: BackgroundService? = null;
 
         fun getInstance(): BackgroundService? {
@@ -52,11 +54,13 @@ class BackgroundService: Service() {
             return pendingIntent != null;
         }
 
-        fun start(context: Context, interval: Duration = 1.toDuration(DurationUnit.MINUTES)) {
+        fun start(context: Context) {
             if (!getIsStarted(context)) {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
                 val intent = Intent(context, BackgroundService::class.java);
                 val pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);
+                val settings = Settings(context);
+                val interval = maxOf(settings.interval, 1).toDuration(DurationUnit.MINUTES);
                 context.startForegroundService(intent); // required service.startForeground call is done in onCreate
                 alarmManager.setInexactRepeating(
                     AlarmManager.RTC_WAKEUP,
@@ -64,8 +68,8 @@ class BackgroundService: Service() {
                     interval.inWholeMilliseconds,
                     pendingIntent,
                 );
-                Log.d(TAG, "Starting repeating background service through alarm manager");
-                Toast.makeText(context, "Starting repeating background service", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Starting $interval background service");
+                Toast.makeText(context, "Starting $interval background service", Toast.LENGTH_SHORT).show();
             } else {
                 Log.e(TAG, "Could not start repeating background service since it already exists");
             }

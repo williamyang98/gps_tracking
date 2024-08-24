@@ -45,7 +45,7 @@ private const val TAG: String = "main_activity";
 
 class MainActivity : ComponentActivity() {
     private lateinit var gpsSenderContext: GpsSenderContext;
-    private lateinit var pref: SharedPreferences;
+    private lateinit var settings: Settings;
 
     private val listenGpsSender = object: GpsSenderListener {
         override fun onGpsData() {
@@ -59,10 +59,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
         gpsSenderContext = GpsSenderContext(this);
-        pref = PreferenceManager.getDefaultSharedPreferences(applicationContext);
+        settings = Settings(this);
         val gpsSender = GpsSender.getInstance();
         gpsSender.listen(listenGpsSender);
-        if (pref.getBoolean("autostart", false)) {
+        if (settings.autostart) {
             BackgroundService.start(this);
         }
         this.renderView();
@@ -182,7 +182,7 @@ class MainActivity : ComponentActivity() {
                                 item {
                                     Row {
                                         TableCell(text="User Id", weight=col0)
-                                        TableCell(text="${pref.getInt("user_id", 0)}", weight=col1)
+                                        TableCell(text="${settings.userId}", weight=col1)
                                     }
                                 }
                                 item {
@@ -299,7 +299,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun RowScope.TableCell(
+private fun RowScope.TableCell(
     text: String,
     weight: Float
 ) {
