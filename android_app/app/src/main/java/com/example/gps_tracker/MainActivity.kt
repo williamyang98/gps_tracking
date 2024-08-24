@@ -48,6 +48,7 @@ private const val TAG: String = "main_activity";
 class MainActivity : ComponentActivity() {
     private lateinit var gpsSenderContext: GpsSenderContext;
     private lateinit var settings: Settings;
+    private var gpsService: BackgroundService? = null;
 
     private val listenGpsSender = object: GpsSenderListener {
         override fun onGpsData() {
@@ -62,6 +63,21 @@ class MainActivity : ComponentActivity() {
             } else {
                 Toast.makeText(applicationContext, "Failed to register username", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private val gpsServiceConnection = object: ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, ibinder: IBinder) {
+            val binder = ibinder as BackgroundService.LocalBinder;
+            gpsService = binder.getService();
+            renderView();
+            Toast.makeText(applicationContext, "Bound to gps service", Toast.LENGTH_SHORT).show();
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            gpsService = null;
+            renderView();
+            Toast.makeText(applicationContext, "Unbounded from gps service", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -81,6 +97,18 @@ class MainActivity : ComponentActivity() {
         super.onDestroy();
         val gpsSender = GpsSender.getInstance();
         gpsSender.unlisten(listenGpsSender);
+    }
+
+    override fun onStart() {
+        super.onStart();
+        Intent(this, BackgroundService::class.java).also {
+            bindService(it, gpsServiceConnection, Context.BIND_FOREGROUND_SERVICE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop();
+        unbindService(gpsServiceConnection);
     }
 
     private fun renderView() {
@@ -132,9 +160,13 @@ class MainActivity : ComponentActivity() {
                         }
                         Row {
                             RadioButton(
-                                selected=(BackgroundService.getInstance() != null),
-                                onClick={},
-                                enabled=false,
+                                selected=(gpsService != null),
+                                onClick={
+                                    gpsService?.let {
+                                        self.stopService(Intent(self, BackgroundService::class.java))
+                                    }
+                                },
+                                enabled=(gpsService != null),
                             )
                             Text(text="Background service")
                         }
@@ -213,7 +245,7 @@ class MainActivity : ComponentActivity() {
                         }
                         Text(text="Permissions", style=MaterialTheme.typography.headlineSmall)
                         Row {
-                            LazyColumn {
+                            LazyColumn(modifier=Modifier.weight(1.0f)) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                                     item {
                                         Row {

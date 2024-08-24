@@ -42,12 +42,6 @@ private const val TAG: String = "background_gps_service";
 
 class BackgroundService: Service() {
     companion object {
-        @SuppressLint("StaticFieldLeak")
-        private var instance: BackgroundService? = null;
-
-        fun getInstance(): BackgroundService? {
-            return instance;
-        }
         fun getIsStarted(context: Context): Boolean {
             val intent = Intent(context, BackgroundService::class.java);
             val pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE);
@@ -104,7 +98,6 @@ class BackgroundService: Service() {
         } else {
             this.startForeground(1, notification);
         }
-        instance = this;
         Log.d(TAG, "Created service");
         Toast.makeText(this, "Background GPS service has been created", Toast.LENGTH_SHORT).show();
     }
@@ -117,14 +110,17 @@ class BackgroundService: Service() {
 
     override fun onDestroy() {
         super.onDestroy();
-        if (instance == this) {
-            instance = null;
-        }
         Log.d(TAG, "Service has been destroyed");
         Toast.makeText(this, "Background GPS service has been destroyed", Toast.LENGTH_SHORT).show();
     }
-    override fun onBind(intent: Intent): IBinder? {
-        return null;
+
+    private val binder = LocalBinder();
+    inner class LocalBinder: Binder() {
+        fun getService(): BackgroundService = this@BackgroundService;
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        return binder;
     }
 
     private fun createNotification(): Notification {
