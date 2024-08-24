@@ -5,10 +5,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.preference.PreferenceManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,7 +23,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -37,6 +45,7 @@ private const val TAG: String = "main_activity";
 
 class MainActivity : ComponentActivity() {
     private lateinit var gpsSenderContext: GpsSenderContext;
+    private lateinit var pref: SharedPreferences;
 
     private val listenGpsSender = object: GpsSenderListener {
         override fun onGpsData() {
@@ -50,9 +59,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
         gpsSenderContext = GpsSenderContext(this);
+        pref = PreferenceManager.getDefaultSharedPreferences(applicationContext);
         val gpsSender = GpsSender.getInstance();
         gpsSender.listen(listenGpsSender);
-        BackgroundService.start(this);
+        if (pref.getBoolean("autostart", false)) {
+            BackgroundService.start(this);
+        }
         this.renderView();
     }
 
@@ -82,8 +94,16 @@ class MainActivity : ComponentActivity() {
                         Row {
                             Text(text="Background Service", style=MaterialTheme.typography.headlineSmall)
                             Spacer(Modifier.weight(1f))
-                            Button(onClick = { renderView() }) {
-                                Text("Refresh");
+                            IconButton(onClick = { renderView() }) {
+                                Icon(Icons.Outlined.Refresh, contentDescription="Refresh")
+                            }
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(self, SettingsActivity::class.java);
+                                    self.startActivity(intent)
+                                }
+                            ) {
+                                Icon(Icons.Outlined.Settings, contentDescription="Settings")
                             }
                         }
                         Row {
@@ -112,8 +132,8 @@ class MainActivity : ComponentActivity() {
                         Row {
                             Text(text="GPS Location", style=MaterialTheme.typography.headlineSmall)
                             Spacer(Modifier.weight(1f))
-                            Button(onClick = { gpsSender.refreshLocation(gpsSenderContext) }) {
-                                Text(text="Refresh")
+                            IconButton(onClick = { gpsSender.refreshLocation(gpsSenderContext) }) {
+                                Icon(Icons.Outlined.Refresh, contentDescription="Refresh")
                             }
                         }
                         Row {
@@ -147,8 +167,8 @@ class MainActivity : ComponentActivity() {
                         Row {
                             Text(text="Server Status", style=MaterialTheme.typography.headlineSmall)
                             Spacer(Modifier.weight(1f))
-                            Button(onClick = { gpsSender.postGPS(gpsSenderContext) }) {
-                                Text(text="Submit")
+                            IconButton(onClick = { gpsSender.postGPS(gpsSenderContext) }) {
+                                Icon(Icons.Outlined.Send, contentDescription="Refresh")
                             }
                         }
                         Row {
@@ -157,6 +177,12 @@ class MainActivity : ComponentActivity() {
                                     Row {
                                         TableCell(text="Time", weight=col0)
                                         TableCell(text="${gpsSender.responseTimestamp}", weight=col1)
+                                    }
+                                }
+                                item {
+                                    Row {
+                                        TableCell(text="User Id", weight=col0)
+                                        TableCell(text="${pref.getInt("user_id", 0)}", weight=col1)
                                     }
                                 }
                                 item {

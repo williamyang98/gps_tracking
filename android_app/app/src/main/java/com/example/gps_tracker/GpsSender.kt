@@ -2,8 +2,10 @@ package com.example.gps_tracker
 
 import android.Manifest
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
+import android.preference.PreferenceManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.android.volley.NetworkResponse
@@ -40,7 +42,6 @@ interface GpsSenderListener {
 
 class GpsSender private constructor() {
     private val listeners = mutableSetOf<GpsSenderListener>();
-    private val userId: Int = 2;
     var locationTimestamp: LocalDateTime? = null;
     var location: Location? = null;
     var statusCode: Int? = null;
@@ -97,6 +98,8 @@ class GpsSender private constructor() {
         if (location == null || locationTimestamp == null) {
             return;
         }
+        val pref = PreferenceManager.getDefaultSharedPreferences(context.parentContext.applicationContext);
+        val userId = pref.getInt("user_id", 0);
         val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
         val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
