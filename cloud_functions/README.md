@@ -7,6 +7,7 @@
 | --- | --- |
 | Deploy function to gcloud | ```./deploy_function.sh <folder_name> <id>``` |
 | Test function locally | ```./test_function.sh <folder_name>``` |
+| Submit gps sample to server | ```python ./post_gps.py --local``` |
 
 ## Urls
 - [get_gps](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-gps)

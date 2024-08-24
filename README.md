@@ -17,14 +17,14 @@
 
 ## Running commands
 - This requires setting up the Firebase datastore in Google cloud first.
-- Refer to ```/cloud_functions``` and ```/scripts``` for commands.
+- Refer to ```/cloud_functions``` and ```/datastore``` for commands.
 
 # Plotting track
 ## Download track data
 - Option 1: [Download from server (attachment)](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-track?download=gps_visualiser_track.csv&max_rows=128&user_id=0)
 - Option 2: Download locally
-    1. Download datastore as csv: ```python ./scripts/export_datastore.py```.
-    2. Convert to track format: ```python ./scripts/convert_to_track_format.py```.
+    1. Download datastore as csv: ```python ./datastore/export_datastore.py```.
+    2. Convert to track format: ```python ./datastore/convert_to_track_format.py```.
 
 ## Upload track data
 1. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
