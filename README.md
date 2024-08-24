@@ -19,6 +19,10 @@
 - This requires setting up the Firebase datastore in Google cloud first.
 - Refer to ```/cloud_functions``` and ```/datastore``` for commands.
 
+## Links to gcloud admin console
+- [Cloud functions](https://console.cloud.google.com/functions/list)
+- [Datastore](https://console.cloud.google.com/datastore/databases/-default-/)
+
 # Plotting track
 ## Download track data
 - Option 1: [Download from server (attachment)](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-track?download=gps_visualiser_track.csv&max_rows=128&user_id=0)

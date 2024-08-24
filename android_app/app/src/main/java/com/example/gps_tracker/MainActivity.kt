@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.border
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Settings
@@ -53,6 +55,13 @@ class MainActivity : ComponentActivity() {
         }
         override fun onGpsPostResponse() {
             renderView();
+        }
+        override fun onUserRegister(success: Boolean, name: String, id: Int) {
+            if (success) {
+                Toast.makeText(applicationContext, "Registered '$name' @ $id", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(applicationContext, "Failed to register username", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -167,6 +176,9 @@ class MainActivity : ComponentActivity() {
                         Row {
                             Text(text="Server Status", style=MaterialTheme.typography.headlineSmall)
                             Spacer(Modifier.weight(1f))
+                            IconButton(onClick = { gpsSender.registerUserId(gpsSenderContext) }) {
+                                Icon(Icons.Outlined.Person, contentDescription="Register")
+                            }
                             IconButton(onClick = { gpsSender.postGPS(gpsSenderContext) }) {
                                 Icon(Icons.Outlined.Send, contentDescription="Refresh")
                             }

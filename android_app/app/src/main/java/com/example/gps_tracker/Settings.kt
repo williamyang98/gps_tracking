@@ -9,6 +9,7 @@ private class Keys {
         const val USER_ID: String = "user_id";
         const val INTERVAL: String = "interval";
         const val AUTOSTART: String = "autostart";
+        const val USER_NAME: String = "user_name";
     }
 }
 
@@ -49,5 +50,16 @@ class Settings(context: Context) {
         }
         set(value: Boolean) {
             prefs.edit().putBoolean(Keys.AUTOSTART, value).apply();
+        }
+
+    var userName: String
+        get() {
+            if (!prefs.contains(Keys.USER_NAME)) {
+                prefs.edit().putString(Keys.USER_NAME, "Unknown").apply();
+            }
+            return prefs.getString(Keys.USER_NAME, "");
+        }
+        set(value: String) {
+            prefs.edit().putString(Keys.USER_NAME, value).apply();
         }
 }

@@ -3,6 +3,7 @@ package com.example.gps_tracker
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.border
@@ -31,7 +32,8 @@ import com.example.gps_tracker.ui.theme.Gps_trackerTheme
 
 class SettingsActivity : ComponentActivity() {
     private lateinit var settings: Settings;
-    private var textEditFields = mutableMapOf<String, String>();
+    private var integerEditFields = mutableMapOf<String, String>();
+    private var stringEditFields = mutableMapOf<String, String>();
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
@@ -50,6 +52,7 @@ class SettingsActivity : ComponentActivity() {
                     Column(modifier=Modifier.fillMaxWidth()) {
                         Text(text="Settings", style=MaterialTheme.typography.headlineSmall)
                         editInteger("User ID", { -> settings.userId }, { v -> settings.userId = v });
+                        editString("User Name",  { -> settings.userName }, { v -> settings.userName = v });
                         editInteger("Interval (minutes)", { -> settings.interval }, { v -> settings.interval = v })
                         editBoolean("Autostart", { -> settings.autostart }, { v -> settings.autostart = v })
                     }
@@ -59,13 +62,27 @@ class SettingsActivity : ComponentActivity() {
     }
 
     @Composable
+    private fun editString(name: String, get: () -> String, set: (String) -> Unit) {
+        Row {
+            NameLabel(text=name)
+            TextField(
+                value=get(),
+                onValueChange={ set(it); renderView(); },
+                keyboardOptions=KeyboardOptions.Default.copy(
+                    keyboardType=KeyboardType.Text,
+                    imeAction=ImeAction.Done,
+                ),
+            )
+        }
+    }
+    @Composable
     private fun editInteger(name: String, get: () -> Int, set: (Int) -> Unit) {
         Row {
             NameLabel(text=name)
             TextField(
-                value=textEditFields.get(name) ?: get().toString(),
+                value= integerEditFields[name] ?: get().toString(),
                 onValueChange={
-                    textEditFields[name] = it;
+                    integerEditFields[name] = it;
                     it.toIntOrNull()?.apply {
                         set(this);
                         renderView();

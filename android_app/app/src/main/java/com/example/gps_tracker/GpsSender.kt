@@ -17,6 +17,7 @@ import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.LocalDateTime
@@ -38,6 +39,7 @@ class GpsSenderContext(context: Context) {
 interface GpsSenderListener {
     fun onGpsData();
     fun onGpsPostResponse();
+    fun onUserRegister(success: Boolean, name: String, id: Int);
 }
 
 class GpsSender private constructor() {
@@ -109,7 +111,8 @@ class GpsSender private constructor() {
         buffer.putDouble(location.longitude);
         buffer.putDouble(location.altitude);
 
-        val url = "https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/post-gps";
+        val baseUrl = context.parentContext.resources.getString(R.string.server_url);
+        val url = "$baseUrl/post-gps";
         val request = BinaryRequest(
             Request.Method.POST, url, buffer.array(),
             { statusCode ->
@@ -138,6 +141,32 @@ class GpsSender private constructor() {
         );
         context.requestQueue.add(request);
     }
+
+    fun registerUserId(context: GpsSenderContext) {
+        val settings = Settings(context.parentContext);
+        val userId = settings.userId;
+        val userName = settings.userName;
+        val baseUrl = context.parentContext.resources.getString(R.string.server_url);
+        val url = "$baseUrl/register-user-name";
+        val body = JSONObject();
+        body.put("user_id", userId.toString());
+        body.put("user_name", userName);
+        val request = JsonRequest(
+            Request.Method.POST, url, body,
+            {
+                Log.d(TAG, "Registering username got $it status code");
+            },
+            { response ->
+                Log.d(TAG, "Successfully registered username: $response");
+                listeners.forEach { it.onUserRegister(true, userName, userId) }
+            },
+            { error ->
+                Log.e(TAG, "Failed to register username: $error");
+                listeners.forEach { it.onUserRegister(false, userName, userId) }
+            },
+        );
+        context.requestQueue.add(request);
+    }
 }
 
 
@@ -153,6 +182,25 @@ private class BinaryRequest(
     }
     override fun getBodyContentType(): String {
         return "application/octet-stream";
+    }
+    override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
+        statusListener.onResponse(response.statusCode);
+        return super.parseNetworkResponse(response);
+    }
+}
+
+private class JsonRequest(
+    method: Int, url: String,
+    private val requestBody: JSONObject,
+    private val statusListener: Response.Listener<Int>,
+    successListener: Response.Listener<String>,
+    errorListener: Response.ErrorListener
+): StringRequest(method, url, successListener, errorListener) {
+    override fun getBody(): ByteArray {
+        return requestBody.toString(2).encodeToByteArray();
+    }
+    override fun getBodyContentType(): String {
+        return "application/json";
     }
     override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
         statusListener.onResponse(response.statusCode);
