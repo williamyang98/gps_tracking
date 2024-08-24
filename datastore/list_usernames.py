@@ -16,6 +16,7 @@ def main():
 
     client = datastore.Client("gps-tracking-433211")
     query = client.query(kind="username")
+    query.order = ["user_id"]
     results = query.fetch()
     users = list(map(lambda x: datastore_to_user(x), results))
 
