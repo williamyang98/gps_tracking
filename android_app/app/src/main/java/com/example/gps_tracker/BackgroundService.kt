@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.graphics.Color
 import android.location.Location
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
@@ -39,41 +40,27 @@ import kotlin.time.toDuration
 private const val TAG: String = "background_gps_service";
 
 class BackgroundService: Service() {
-    private lateinit var fusedLocationClient: FusedLocationProviderClient;
-    private lateinit var requestQueue: RequestQueue;
-    var locationTimestamp: LocalDateTime? = null;
-    var location: Location? = null;
-    var statusCode: Int? = null;
-    var responseBody: String? = null;
-    var responseTimestamp: LocalDateTime? = null;
-
     companion object {
-        @Volatile private var instance: BackgroundService? = null;
-        @Volatile private var pendingIntent: PendingIntent? = null;
+        private var instance: BackgroundService? = null;
 
-        fun getInstance(): BackgroundService? { return instance; }
-        fun getIsStarted(): Boolean { return pendingIntent != null; }
+        fun getInstance(): BackgroundService? {
+            return instance;
+        }
+        fun getIsStarted(context: Context): Boolean {
+            val intent = Intent(context, BackgroundService::class.java);
+            val pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE);
+            return pendingIntent != null;
+        }
 
-        fun start(context: Context, interval: Duration = 10.toDuration(DurationUnit.MINUTES)) {
-            if (pendingIntent == null) {
+        fun start(context: Context, interval: Duration = 1.toDuration(DurationUnit.MINUTES)) {
+            if (!getIsStarted(context)) {
                 val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
                 val intent = Intent(context, BackgroundService::class.java);
-                pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (alarmManager.canScheduleExactAlarms()) {
-                        alarmManager.setExact(
-                            AlarmManager.RTC_WAKEUP,
-                            System.currentTimeMillis(),
-                            pendingIntent,
-                        );
-                        Log.d(TAG, "Started initial exact alarm");
-                    } else {
-                        Log.e(TAG, "Failed to start initial exact alarm");
-                    }
-                }
+                val pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);
+                context.startForegroundService(intent); // required service.startForeground call is done in onCreate
                 alarmManager.setInexactRepeating(
                     AlarmManager.RTC_WAKEUP,
-                    System.currentTimeMillis() + interval.inWholeMilliseconds,
+                    System.currentTimeMillis(),
                     interval.inWholeMilliseconds,
                     pendingIntent,
                 );
@@ -83,102 +70,57 @@ class BackgroundService: Service() {
                 Log.e(TAG, "Could not start repeating background service since it already exists");
             }
         }
+
+        fun stop(context: Context) {
+            val intent = Intent(context, BackgroundService::class.java);
+            val pendingIntent = PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE);
+            when (pendingIntent) {
+                null -> {
+                    Log.e(TAG, "Could not cancel repeating background service since it was not started yet");
+                };
+                else -> {
+                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
+                    alarmManager.cancel(pendingIntent);
+                    pendingIntent.cancel();
+                    Log.d(TAG, "Cancelled repeating background service");
+                    Toast.makeText(context, "Cancelled repeating background service", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
     }
+
+    lateinit var gpsSenderContext: GpsSenderContext;
 
     override fun onCreate() {
         super.onCreate();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        requestQueue = Volley.newRequestQueue(this);
+        gpsSenderContext = GpsSenderContext(this);
         val notification = createNotification();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             this.startForeground(FOREGROUND_SERVICE_TYPE_LOCATION, notification);
         } else {
             this.startForeground(1, notification);
         }
+        instance = this;
         Log.d(TAG, "Created service");
         Toast.makeText(this, "Background GPS service has been created", Toast.LENGTH_SHORT).show();
-        instance = this;
+    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "On start command: $intent");
+        val gpsSender = GpsSender.getInstance();
+        gpsSender.refreshLocation(gpsSenderContext);
+        return START_STICKY;
     }
 
     override fun onDestroy() {
         super.onDestroy();
-        instance = null;
+        if (instance == this) {
+            instance = null;
+        }
         Log.d(TAG, "Service has been destroyed");
         Toast.makeText(this, "Background GPS service has been destroyed", Toast.LENGTH_SHORT).show();
     }
-
-    fun refreshLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
-            if (location != null) {
-                this.location = location;
-                this.locationTimestamp = LocalDateTime.now();
-                Log.d(TAG, "Refreshed GPS location");
-                this.postGPS();
-            } else {
-                this.location = null;
-                this.locationTimestamp = LocalDateTime.now();
-                Log.e(TAG, "Failed to get GPS location");
-            }
-        }
-    }
-
-    fun postGPS() {
-        val location = this.location;
-        val locationTimestamp = this.locationTimestamp;
-        if (location == null || locationTimestamp == null) {
-            return;
-        }
-        val unixTimeStamp = locationTimestamp.atZone(ZoneOffset.systemDefault()).toEpochSecond();
-        val userId: Int = 3;
-        val buffer = ByteBuffer.allocate(4 + 4 + 8 + 8 + 8);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        buffer.putInt(userId);
-        buffer.putInt(unixTimeStamp.toInt());
-        buffer.putDouble(location.latitude);
-        buffer.putDouble(location.longitude);
-        buffer.putDouble(location.altitude);
-
-        val url = "https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/post-gps";
-        val request = BinaryRequest(
-            Request.Method.POST, url, buffer.array(),
-            { statusCode ->
-                this.statusCode = statusCode;
-                this.responseTimestamp = LocalDateTime.now();
-            },
-            { response ->
-                this.responseBody = response;
-                this.responseTimestamp = LocalDateTime.now();
-                Log.d(TAG, "Post GPS succeeded");
-            },
-            { error ->
-                error.networkResponse?.let { response ->
-                    this.statusCode = response.statusCode;
-                    this.responseBody = String(response.data, Charsets.UTF_8);
-                    this.responseTimestamp = LocalDateTime.now();
-                } ?: run {
-                    this.statusCode = null;
-                    this.responseBody = error.message;
-                    this.responseTimestamp = LocalDateTime.now();
-                }
-                Log.e(TAG, "Post GPS failed: ${error.networkResponse}");
-            }
-        );
-        requestQueue.add(request);
-    }
     override fun onBind(intent: Intent): IBinder? {
         return null;
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "On start command: $intent");
-        refreshLocation();
-        return START_STICKY;
     }
 
     private fun createNotification(): Notification {
@@ -209,24 +151,5 @@ class BackgroundService: Service() {
             .setTicker("Ticker text")
             .setPriority(Notification.PRIORITY_HIGH) // for under android 26 compatibility
             .build();
-    }
-}
-
-class BinaryRequest(
-    method: Int, url: String,
-    private val requestBody: ByteArray,
-    private val statusListener: Response.Listener<Int>,
-    successListener: Response.Listener<String>,
-    errorListener: Response.ErrorListener
-): StringRequest(method, url, successListener, errorListener) {
-    override fun getBody(): ByteArray {
-        return requestBody;
-    }
-    override fun getBodyContentType(): String {
-        return "application/octet-stream";
-    }
-    override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
-        statusListener.onResponse(response.statusCode);
-        return super.parseNetworkResponse(response);
     }
 }
