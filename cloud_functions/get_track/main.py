@@ -45,34 +45,31 @@ def get_track(req: flask.Request) -> flask.typing.ResponseReturnValue:
         except:
             return "Max rows must be an integer", HTTPStatus.BAD_REQUEST
 
-    tz = req.args.get("timezone", None)
+    tz = req.args.get("timezone", 10.0)
     if tz != None:
         try:
             tz = float(tz)
-            tz = timezone(timedelta(hours=tz))
         except Exception as ex:
-            return f"Invalid timezone: {ex}", HTTPStatus.BAD_REQUEST
+            return f"Timezone must be a float", HTTPStatus.BAD_REQUEST
+    try:
+        tz = timezone(timedelta(hours=tz))
+    except:
+        return f"Invalid timezone: {ex}", HTTPStatus.BAD_REQUEST
 
     client = datastore.Client("gps-tracking-433211")
     query = client.query(kind="gps")
-    # For some reason this breaks the order sort
-    # query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
+    query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
     query.order = ["-unix_time"]
-    results = query.fetch()
+    results = query.fetch(limit=max_rows)
 
     def create_csv(results):
         yield ','.join(TRACK_HEADERS)
         yield '\n'
-        total_rows = 0
         for row in results:
             data = datastore_to_gps_data(row)
-            if data.user_id == user_id:
-                track = convert_to_trackpoint(data, tz)
-                yield ','.join(map(str, track))
-                yield '\n'
-                total_rows += 1
-                if max_rows != None and total_rows >= max_rows:
-                    break
+            track = convert_to_trackpoint(data, tz)
+            yield ','.join(map(str, track))
+            yield '\n'
 
     res = flask.make_response((create_csv(results), HTTPStatus.OK))
     if download_name != None:

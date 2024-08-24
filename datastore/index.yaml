@@ -1,0 +1,6 @@
+indexes:
+- kind: gps
+  properties:
+  - name: user_id
+  - name: unix_time
+    direction: desc

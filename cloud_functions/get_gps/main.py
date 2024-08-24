@@ -41,23 +41,18 @@ def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
 
     client = datastore.Client("gps-tracking-433211")
     query = client.query(kind="gps")
-    # For some reason this breaks the order sort
-    # query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
+    if user_id != None:
+        query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
     query.order = ["-unix_time"]
-    results = query.fetch()
+    results = query.fetch(limit=max_rows)
 
     def create_csv(results):
         yield ','.join(GPS_Data._fields)
         yield '\n'
-        total_rows = 0
         for row in results:
             data = datastore_to_gps_data(row)
-            if user_id == None or data.user_id == user_id:
-                yield ','.join(map(str, data))
-                yield '\n'
-                total_rows += 1
-                if max_rows != None and total_rows >= max_rows:
-                    break
+            yield ','.join(map(str, data))
+            yield '\n'
 
     res = flask.make_response((create_csv(results), HTTPStatus.OK))
     if download_name != None:
