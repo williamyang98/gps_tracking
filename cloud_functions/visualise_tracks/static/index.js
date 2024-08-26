@@ -61,6 +61,7 @@ export class App {
     this.map_points = [];
     this.map_lines = [];
     this.map_markers = [];
+    this.map_info = new google.maps.InfoWindow();
     this.table_rows = [];
     this.selected_marker_index = null;
     this.bind_controls();
@@ -93,19 +94,7 @@ export class App {
     });
     this.elems.gps_points_show_all.addEventListener("click", (ev) => {
       ev.preventDefault();
-      let marker_opacity = Number(this.elems.settings.marker_opacity.value);
-      let marker_opacity_falloff = Number(this.elems.settings.marker_opacity_falloff.value);
-      if (this.map_markers.length === 0) return;
-      let step = 1 / this.map_markers.length;
-      let total = this.map_markers.length;
-      for (let index = 0; index < total; index++) {
-        let marker = this.map_markers[index];
-        let amount = step*index;
-        let opacity = marker_opacity*(1-amount*marker_opacity_falloff);
-        marker.setOpacity(opacity);
-        let table_row = this.table_rows[index];
-        table_row.classList.remove("selected");
-      };
+      this.show_all_markers();
     });
     this.elems.gps_points_select_up.addEventListener("click", (ev) => {
       ev.preventDefault();
@@ -180,17 +169,17 @@ export class App {
       return row_elem;
     });
     this.gps_points = gps_points;
+    this.map_points = gps_points.map(row => { return { lat: row.latitude, lng: row.longitude }; });
     // render track on map
     this.render_track();
   }
 
   render_track = () => {
     let gps_points = this.gps_points;
+    let map_points = this.map_points;
     let map = this.map;
     if (gps_points.length === 0) return;
 
-    let map_points = gps_points.map(row => { return { lat: row.latitude, lng: row.longitude }; });
-    this.map_points = map_points;
     let total_points = gps_points.length;
     let step = 1 / total_points;
     let to_hex = (v) => {
@@ -291,11 +280,38 @@ export class App {
   }
 
   select_marker = (index) => {
-    if (this.map_markers.length === 0) return;
     let total = this.map_markers.length;
+    if (total === 0) return;
+    if (index < 0) return;
+    if (index >= total) return;
     this.selected_marker_index = index;
     this.elems.gps_points_select_up.disabled = (index == 0);
     this.elems.gps_points_select_down.disabled = (index >= (total-1));
+    let selected_marker = this.map_markers[index];
+    let selected_gps_point = this.gps_points[index];
+    let selected_map_point = this.map_points[index];
+    this.map_info.open({
+      anchor: selected_marker,
+      map: this.map,
+    });
+    this.map.setCenter(selected_map_point);
+    this.map_info.setContent(`
+      <style>
+        .gm-ui-hover-effect {
+          display: none !important;
+        }
+      </style>
+      <div style="margin: 2px">
+        <table>
+          <tbody>
+            <tr><td>Time</td><td>${selected_gps_point.name}</td></tr>
+            <tr><td>Latitude</td><td>${selected_gps_point.latitude.toFixed(6)}</td></tr>
+            <tr><td>Longitude</td><td>${selected_gps_point.longitude.toFixed(6)}</td></tr>
+            <tr><td>Altitude (m)</td><td>${selected_gps_point.altitude.toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `);
     for (let marker_index = 0; marker_index < total; marker_index++) {
       let marker = this.map_markers[marker_index];
       let table_row = this.table_rows[marker_index];
@@ -308,5 +324,25 @@ export class App {
       }
       marker.setOpacity(opacity);
     }
+  }
+
+  show_all_markers = () => {
+    let marker_opacity = Number(this.elems.settings.marker_opacity.value);
+    let marker_opacity_falloff = Number(this.elems.settings.marker_opacity_falloff.value);
+    if (this.map_markers.length === 0) return;
+    this.selected_marker_index = null;
+    this.map_info.close();
+    this.elems.gps_points_select_up.disabled = true;
+    this.elems.gps_points_select_down.disabled = true;
+    let step = 1 / this.map_markers.length;
+    let total = this.map_markers.length;
+    for (let index = 0; index < total; index++) {
+      let marker = this.map_markers[index];
+      let amount = step*index;
+      let opacity = marker_opacity*(1-amount*marker_opacity_falloff);
+      marker.setOpacity(opacity);
+      let table_row = this.table_rows[index];
+      table_row.classList.remove("selected");
+    };
   }
 }
