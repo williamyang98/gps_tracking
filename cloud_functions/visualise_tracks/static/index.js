@@ -29,6 +29,8 @@ export class App {
       "user_list": document.getElementById("user_list"),
       "user_list_refresh": document.getElementById("user_list_refresh"),
       "gps_points": document.getElementById("gps_points"),
+      "gps_points_select_up": document.getElementById("gps_points_select_up"),
+      "gps_points_select_down": document.getElementById("gps_points_select_down"),
       "gps_points_show_all": document.getElementById("gps_points_show_all"),
       "gps_points_refresh": document.getElementById("gps_points_refresh"),
       "gps_points_render": document.getElementById("gps_points_render"),
@@ -60,6 +62,7 @@ export class App {
     this.map_lines = [];
     this.map_markers = [];
     this.table_rows = [];
+    this.selected_marker_index = null;
     this.bind_controls();
     this.load_users();
   }
@@ -103,6 +106,18 @@ export class App {
         let table_row = this.table_rows[index];
         table_row.classList.remove("selected");
       };
+    });
+    this.elems.gps_points_select_up.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (this.selected_marker_index === null) return;
+      if (this.selected_marker_index === 0) return;
+      this.select_marker(this.selected_marker_index-1);
+    });
+    this.elems.gps_points_select_down.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (this.selected_marker_index === null) return;
+      if (this.selected_marker_index >= (this.map_markers.length - 1)) return;
+      this.select_marker(this.selected_marker_index+1);
     });
   }
 
@@ -159,19 +174,7 @@ export class App {
       `;
       row_elem.addEventListener("click", (ev) => {
         ev.preventDefault();
-        let total = this.map_markers.length;
-        for (let marker_index = 0; marker_index < total; marker_index++) {
-          let marker = this.map_markers[marker_index];
-          let table_row = this.table_rows[marker_index];
-          let is_selected = marker_index == index;
-          let opacity = is_selected ? 1 : 0;
-          if (is_selected) {
-            table_row.classList.add("selected");
-          } else {
-            table_row.classList.remove("selected");
-          }
-          marker.setOpacity(opacity);
-        }
+        this.select_marker(index);
       });
       elem.appendChild(row_elem);
       return row_elem;
@@ -279,6 +282,31 @@ export class App {
     if (this.map_markers !== null) {
       this.map_markers.forEach(marker => marker.setMap(null));
       this.map_markers = [];
+    }
+
+    this.selected_marker_index = 0;
+    this.elems.gps_points_select_down.disabled = true;
+    this.elems.gps_points_select_up.disabled = true;
+    this.table_rows.forEach(row => row.classList.remove("selected"));
+  }
+
+  select_marker = (index) => {
+    if (this.map_markers.length === 0) return;
+    let total = this.map_markers.length;
+    this.selected_marker_index = index;
+    this.elems.gps_points_select_up.disabled = (index == 0);
+    this.elems.gps_points_select_down.disabled = (index >= (total-1));
+    for (let marker_index = 0; marker_index < total; marker_index++) {
+      let marker = this.map_markers[marker_index];
+      let table_row = this.table_rows[marker_index];
+      let is_selected = marker_index == index;
+      let opacity = is_selected ? 1 : 0;
+      if (is_selected) {
+        table_row.classList.add("selected");
+      } else {
+        table_row.classList.remove("selected");
+      }
+      marker.setOpacity(opacity);
     }
   }
 }
