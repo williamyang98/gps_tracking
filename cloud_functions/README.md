@@ -9,6 +9,7 @@
 | Test function locally | ```./test_function.sh <folder_name>``` |
 | Submit gps sample to server | ```python ./post_gps.py --local``` |
 | Register username | ```python ./post_user_name.py <id> <name> --local``` |
+| Serve track visualiser | ```python -m http.server -d ./visualise_tracks/static/``` |
 
 ## Urls
 - [get_gps](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-gps)

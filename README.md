@@ -24,16 +24,14 @@
 - [Datastore](https://console.cloud.google.com/datastore/databases/-default-/)
 
 # Plotting track with website
+## Using Google cloud
+[GPS Track Visualiser](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/visualise-tracks/)
+
 ## Deploying website locally
-1. Start static file serving server: ```python -m http.server -d ./static/```.
+1. Start static file serving server: ```python -m http.server -d ./cloud_functions/visualise_tracks/static/```.
 2. Open browser to ```localhost:8000``` or whatever the URL is.
 
 ![Local visualiser](./docs/local_visualiser.png)
-
-## Using Github pages
-[![gh-pages-deploy](https://github.com/williamyang98/gps_tracking/actions/workflows/gh-pages-deploy.yml/badge.svg)](https://github.com/williamyang98/gps_tracking/actions/workflows/gh-pages-deploy.yml)
-
-[Github Pages](https://williamyang98.github.io/gps_tracking/)
 
 # Plotting track with GPS Visualiser
 ## Download track data
