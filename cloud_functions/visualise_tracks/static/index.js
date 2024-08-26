@@ -57,7 +57,7 @@ export class App {
     })
     this.users = [];
     this.selected_user = null;
-    this.gps_points = null;
+    this.gps_points = [];
     this.map_points = [];
     this.map_lines = [];
     this.map_markers = [];
@@ -89,7 +89,6 @@ export class App {
     });
     this.elems.gps_points_render.addEventListener("click", (ev) => {
       ev.preventDefault();
-      this.clear_map_path();
       this.render_track();
     });
     this.elems.gps_points_show_all.addEventListener("click", (ev) => {
@@ -141,7 +140,6 @@ export class App {
   load_user = async (user_id) => {
     let max_rows = Number(this.elems.settings.max_rows.value);
     let timezone = Number(this.elems.settings.timezone.value);
-    this.clear_map_path();
     let gps_points = await GpsApi.get_track({ user_id, max_rows, timezone });
     // create html table
     let elem = this.elems.gps_points;
@@ -179,6 +177,7 @@ export class App {
     let map_points = this.map_points;
     let map = this.map;
     if (gps_points.length === 0) return;
+    this.clear_map_path();
 
     let total_points = gps_points.length;
     let step = 1 / total_points;
@@ -262,17 +261,10 @@ export class App {
   }
 
   clear_map_path = () => {
-    this.map_points = [];
-    if (this.map_lines !== null) {
-      this.map_lines.forEach(line => line.setMap(null));
-      this.map_lines = [];
-    }
-
-    if (this.map_markers !== null) {
-      this.map_markers.forEach(marker => marker.setMap(null));
-      this.map_markers = [];
-    }
-
+    this.map_lines.forEach(line => line.setMap(null));
+    this.map_lines = [];
+    this.map_markers.forEach(marker => marker.setMap(null));
+    this.map_markers = [];
     this.selected_marker_index = 0;
     this.elems.gps_points_select_down.disabled = true;
     this.elems.gps_points_select_up.disabled = true;
@@ -316,31 +308,25 @@ export class App {
       let marker = this.map_markers[marker_index];
       let table_row = this.table_rows[marker_index];
       let is_selected = marker_index == index;
-      let opacity = is_selected ? 1 : 0;
       if (is_selected) {
         table_row.classList.add("selected");
       } else {
         table_row.classList.remove("selected");
       }
-      marker.setOpacity(opacity);
+      marker.setVisible(is_selected);
     }
   }
 
   show_all_markers = () => {
-    let marker_opacity = Number(this.elems.settings.marker_opacity.value);
-    let marker_opacity_falloff = Number(this.elems.settings.marker_opacity_falloff.value);
     if (this.map_markers.length === 0) return;
     this.selected_marker_index = null;
     this.map_info.close();
     this.elems.gps_points_select_up.disabled = true;
     this.elems.gps_points_select_down.disabled = true;
-    let step = 1 / this.map_markers.length;
     let total = this.map_markers.length;
     for (let index = 0; index < total; index++) {
       let marker = this.map_markers[index];
-      let amount = step*index;
-      let opacity = marker_opacity*(1-amount*marker_opacity_falloff);
-      marker.setOpacity(opacity);
+      marker.setVisible(true);
       let table_row = this.table_rows[index];
       table_row.classList.remove("selected");
     };
