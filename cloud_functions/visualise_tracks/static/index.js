@@ -35,6 +35,8 @@ export class App {
       "settings": {
         "max_rows": document.getElementById("settings_max_rows"),
         "timezone": document.getElementById("settings_timezone"),
+        "zoom_level": document.getElementById("settings_zoom_level"),
+        "stroke_hue": document.getElementById("settings_stroke_hue"),
         "stroke_weight": document.getElementById("settings_stroke_weight"),
         "stroke_weight_falloff": document.getElementById("settings_stroke_weight_falloff"),
         "stroke_opacity": document.getElementById("settings_stroke_opacity"),
@@ -43,6 +45,7 @@ export class App {
         "marker_size_falloff": document.getElementById("settings_marker_size_falloff"),
         "marker_opacity": document.getElementById("settings_marker_opacity"),
         "marker_opacity_falloff": document.getElementById("settings_marker_opacity_falloff"),
+        "marker_outline": document.getElementById("settings_marker_outline"),
       },
     };
     this.map = new google.maps.Map(this.elems.map, {
@@ -185,9 +188,6 @@ export class App {
 
     let map_points = gps_points.map(row => { return { lat: row.latitude, lng: row.longitude }; });
     this.map_points = map_points;
-    map.setCenter(map_points[0])
-    map.setZoom(20)
-
     let total_points = gps_points.length;
     let step = 1 / total_points;
     let to_hex = (v) => {
@@ -197,6 +197,8 @@ export class App {
       return padded.substring(n);
     };
 
+    let zoom_level = Number(this.elems.settings.zoom_level.value);
+    let stroke_hue = Number(this.elems.settings.stroke_hue.value);
     let stroke_weight = Number(this.elems.settings.stroke_weight.value);
     let stroke_weight_falloff = Number(this.elems.settings.stroke_weight_falloff.value);
     let stroke_opacity = Number(this.elems.settings.stroke_opacity.value);
@@ -205,10 +207,14 @@ export class App {
     let marker_size_falloff = Number(this.elems.settings.marker_size_falloff.value);
     let marker_opacity = Number(this.elems.settings.marker_opacity.value);
     let marker_opacity_falloff = Number(this.elems.settings.marker_opacity_falloff.value);
+    let marker_outline = Number(this.elems.settings.marker_outline.value);
+
+    map.setCenter(map_points[0])
+    map.setZoom(zoom_level)
 
     let colours = gps_points.map((_row, index) => {
       let amount = step*index;
-      let hue = amount*0.5;
+      let hue = amount*stroke_hue;
       let [r,g,b] = hsv_to_rgb(hue, 1, 1);
       let rgb = [r,g,b].map(c => to_hex(c)).join("");
       let colour = `#${rgb}`;
@@ -254,7 +260,7 @@ export class App {
             fillColor: fill_color,
             fillOpacity: fill_opacity,
             strokeWeight: 1,
-            strokeOpacity: 1,
+            strokeOpacity: marker_outline,
           },
           optimized: true,
         });
