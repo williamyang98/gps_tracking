@@ -15,7 +15,26 @@ def datastore_to_gps_data(entry):
     altitude = float(entry["altitude"])
     return GPS_Data(user_id, unix_time, latitude, longitude, altitude)
 
+def enable_cors(endpoint):
+    # https://cloud.google.com/functions/docs/samples/functions-http-cors
+    def cors_endpoint(req: flask.Request) -> flask.typing.ResponseReturnValue:
+        # Allows GET requests from any origin with the Content-Type
+        # header and caches preflight response for an 3600s
+        if req.method == "OPTIONS":
+            headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Max-Age": "3600",
+            }
+            return ("", 204, headers)
+        res = endpoint(req)
+        res.headers["Access-Control-Allow-Origin"] = "*"
+        return res
+    return cors_endpoint
+
 @functions_framework.http
+@enable_cors
 def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
     if req.method != 'GET':
         return "GET request required", HTTPStatus.METHOD_NOT_ALLOWED
