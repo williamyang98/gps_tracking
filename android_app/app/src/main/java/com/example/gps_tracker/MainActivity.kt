@@ -442,7 +442,7 @@ class MainActivity : ComponentActivity() {
                                             Icon(
                                                 imageVector = Icons.Outlined.Refresh,
                                                 contentDescription = null,
-                                                tint = Color.Yellow,
+                                                tint = Color.LightGray,
                                             )
                                         }
                                     },
@@ -463,7 +463,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     headlineContent = {
                                         Text(
-                                            text = ev.endLocalDateTime.format(
+                                            text = ev.startLocalDateTime.format(
                                                 FORMAT_DATETIME
                                             )
                                         )
@@ -495,7 +495,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     headlineContent = {
                                         Text(
-                                            text = ev.endLocalDateTime.format(
+                                            text = ev.startLocalDateTime.format(
                                                 FORMAT_DATETIME
                                             )
                                         )
@@ -716,6 +716,7 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+                pushRow("Total Pending", "${gpsSender.gpsDataQueue.size}");
                 pushRow(
                     "Time",
                     "${gpsSender.lastServerResponse?.endLocalDateTime?.format(FORMAT_DATETIME)}"

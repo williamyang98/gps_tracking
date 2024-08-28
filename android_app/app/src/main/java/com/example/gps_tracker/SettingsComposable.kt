@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
@@ -18,6 +21,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -56,35 +60,35 @@ class SettingsComposable private constructor() {
                         .padding(16.dp),
                 )
             }
-            editInteger(
+            EditInteger(
                 "User ID",
                 Icons.Filled.Face,
                 { -> settings.userId },
                 { v -> settings.userId = v },
                 onChange
             );
-            editString(
+            EditString(
                 "User Name",
                 Icons.Filled.AccountBox,
                 { -> settings.userName },
                 { v -> settings.userName = v },
                 onChange
             );
-            editInteger(
+            EditInteger(
                 "Interval (minutes)",
                 Icons.Filled.DateRange,
                 { -> settings.interval },
                 { v -> settings.interval = v },
                 onChange
             )
-            editInteger(
+            EditInteger(
                 "Timeline Length",
                 Icons.Filled.List,
                 { -> settings.timelineLength },
                 { v -> settings.timelineLength = v },
                 onChange
             )
-            editBoolean(
+            EditBoolean(
                 "Autostart",
                 "Start background service on open",
                 Icons.Filled.PlayArrow,
@@ -96,7 +100,7 @@ class SettingsComposable private constructor() {
     }
 
     @Composable
-    private fun editString(
+    private fun EditString(
         name: String,
         icon: ImageVector?,
         get: () -> String,
@@ -133,7 +137,7 @@ class SettingsComposable private constructor() {
     }
 
     @Composable
-    private fun editInteger(
+    private fun EditInteger(
         name: String,
         icon: ImageVector?,
         get: () -> Int,
@@ -176,7 +180,7 @@ class SettingsComposable private constructor() {
     }
 
     @Composable
-    private fun editBoolean(
+    private fun EditBoolean(
         name: String,
         description: String?,
         icon: ImageVector?,
@@ -184,6 +188,7 @@ class SettingsComposable private constructor() {
         set: (Boolean) -> Unit,
         onChange: () -> Unit
     ) {
+        val isChecked = get();
         ListItem(
             leadingContent = {
                 icon?.let {
@@ -197,10 +202,27 @@ class SettingsComposable private constructor() {
             supportingContent = { description?.let { Text(text = it) } },
             trailingContent = {
                 Switch(
-                    checked = get(),
+                    checked = isChecked,
                     onCheckedChange = {
                         set(it);
                         onChange();
+                    },
+                    thumbContent = if (isChecked) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                            )
+                        }
+                    } else {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Clear,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                            )
+                        }
                     }
                 )
             }
