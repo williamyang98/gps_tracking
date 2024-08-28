@@ -21,10 +21,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.gps_tracker.ui.theme.Gps_trackerTheme
 
@@ -32,8 +34,6 @@ import com.example.gps_tracker.ui.theme.Gps_trackerTheme
 
 class SettingsActivity : ComponentActivity() {
     private lateinit var settings: Settings;
-    private var integerEditFields = mutableMapOf<String, String>();
-    private var stringEditFields = mutableMapOf<String, String>();
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
@@ -42,6 +42,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun renderView() {
+        val settingsComposable = SettingsComposable.getInstance();
         setContent {
             Gps_trackerTheme {
                 // A surface container using the 'background' color from the theme
@@ -49,75 +50,10 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Column(modifier=Modifier.fillMaxWidth()) {
-                        Text(text="Settings", style=MaterialTheme.typography.headlineSmall)
-                        editInteger("User ID", { -> settings.userId }, { v -> settings.userId = v });
-                        editString("User Name",  { -> settings.userName }, { v -> settings.userName = v });
-                        editInteger("Interval (minutes)", { -> settings.interval }, { v -> settings.interval = v })
-                        editBoolean("Autostart", { -> settings.autostart }, { v -> settings.autostart = v })
-                    }
+                    settingsComposable.render(settings, onChange={ renderView() });
                 }
             }
         }
     }
 
-    @Composable
-    private fun editString(name: String, get: () -> String, set: (String) -> Unit) {
-        Row {
-            NameLabel(text=name)
-            TextField(
-                value=get(),
-                onValueChange={ set(it); renderView(); },
-                keyboardOptions=KeyboardOptions.Default.copy(
-                    keyboardType=KeyboardType.Text,
-                    imeAction=ImeAction.Done,
-                ),
-            )
-        }
-    }
-    @Composable
-    private fun editInteger(name: String, get: () -> Int, set: (Int) -> Unit) {
-        Row {
-            NameLabel(text=name)
-            TextField(
-                value= integerEditFields[name] ?: get().toString(),
-                onValueChange={
-                    integerEditFields[name] = it;
-                    it.toIntOrNull()?.apply {
-                        set(this);
-                        renderView();
-                    }
-                },
-                keyboardOptions=KeyboardOptions.Default.copy(
-                    keyboardType=KeyboardType.Number,
-                    imeAction=ImeAction.Done,
-                ),
-            )
-        }
-    }
-
-    @Composable
-    private fun editBoolean(name: String, get: () -> Boolean, set: (Boolean) -> Unit) {
-        Row {
-            NameLabel(text=name)
-            Checkbox(
-                checked=get(),
-                onCheckedChange={
-                    set(it);
-                    renderView();
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun RowScope.NameLabel(text: String) {
-    Text(
-        text=text,
-        Modifier
-            .fillMaxWidth(1.0f)
-            .weight(1f)
-            .padding(8.dp)
-    )
 }

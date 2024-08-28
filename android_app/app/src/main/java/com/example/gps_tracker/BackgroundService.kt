@@ -80,6 +80,7 @@ class BackgroundService: Service() {
                     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
                     alarmManager.cancel(pendingIntent);
                     pendingIntent.cancel();
+                    context.stopService(intent)
                     Log.d(TAG, "Cancelled repeating background service");
                     Toast.makeText(context, "Cancelled repeating background service", Toast.LENGTH_SHORT).show();
                 }

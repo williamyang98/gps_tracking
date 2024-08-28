@@ -105,7 +105,7 @@ export class GpsApi {
         user_id = Number(user_id);
         unix_time_millis = Number(unix_time_millis);
         battery_percentage = Number(battery_percentage);
-        battery_charging = Boolean(battery_charging);
+        battery_charging = Boolean(battery_charging == "True");
         latitude = Number(latitude);
         longitude = Number(longitude);
         accuracy = (accuracy !== null) ? Number(accuracy) : null;

@@ -27,6 +27,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.LinkedList
 import java.util.Vector
 import kotlin.experimental.or
 import kotlin.properties.Delegates
@@ -66,6 +67,7 @@ class GpsData {
     var bearing: Float? = null;
     var bearingAccuracy: Float? = null;
     var locationExtras: Bundle? = null;
+    var isSent: Boolean = false;
 
     val localDateTime: LocalDateTime get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.unixTimeMillis), ZoneId.systemDefault());
 
@@ -126,6 +128,7 @@ class ServerResponse {
     var endUnixTimeMillis: Long = 0;
     var statusCode: Int? = null;
     var responseBody: String? = null;
+    var totalSent: Int? = null;
 
     val startLocalDateTime: LocalDateTime
         get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.startUnixTimeMillis), ZoneId.systemDefault());
@@ -143,10 +146,20 @@ class GpsSenderStatistics {
     var postDataPoints: Int = 0;
 }
 
+sealed class TimeLineEvent {
+    data class MeasurementFail(val unixTimeMillis: Long): TimeLineEvent() {
+        val localDateTime: LocalDateTime get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.unixTimeMillis), ZoneId.systemDefault());
+    }
+    data class MeasurementSuccess(val gpsData: GpsData): TimeLineEvent()
+    data class TransmissionFail(val serverResponse: ServerResponse): TimeLineEvent()
+    data class TransmissionSuccess(val serverResponse: ServerResponse): TimeLineEvent()
+}
+
 class GpsSender private constructor() {
     private val listeners = mutableSetOf<GpsSenderListener>();
     var stats = GpsSenderStatistics();
-    var gpsDataQueue = mutableListOf<GpsData>();
+    var gpsDataTimeline = LinkedList<TimeLineEvent>();
+    var gpsDataQueue = LinkedList<GpsData>();
     var lastGpsData: GpsData? = null;
     var lastServerResponse: ServerResponse? = null;
 
@@ -163,6 +176,20 @@ class GpsSender private constructor() {
 
     fun unlisten(listener: GpsSenderListener) {
         listeners.remove(listener);
+    }
+
+    private fun pushTimelineEvent(context: GpsSenderContext, event: TimeLineEvent) {
+        synchronized(this.gpsDataTimeline) {
+            this.gpsDataTimeline.addFirst(event);
+            val settings = Settings(context.parentContext);
+            val maxLength = settings.timelineLength;
+            val totalRemove = this.gpsDataTimeline.size - maxLength;
+            if (totalRemove > 0) {
+                for (_i in 0 until totalRemove) {
+                    this.gpsDataTimeline.removeLast();
+                }
+            }
+        }
     }
 
     fun refreshLocation(context: GpsSenderContext) {
@@ -201,13 +228,15 @@ class GpsSender private constructor() {
                 data.bearingAccuracy = if (location.hasBearingAccuracy()) { location.bearingAccuracyDegrees } else { null };
                 data.locationExtras = location.extras;
                 this.lastGpsData = data;
+                pushTimelineEvent(context, TimeLineEvent.MeasurementSuccess(data));
                 synchronized(this.gpsDataQueue) {
-                    this.gpsDataQueue.add(data);
+                    this.gpsDataQueue.addFirst(data);
                 }
                 this.stats.measureSuccess++;
                 this.postGPS(context);
             } ?: {
                 this.lastGpsData = null;
+                pushTimelineEvent(context, TimeLineEvent.MeasurementFail(System.currentTimeMillis()))
                 this.stats.measureFail++;
             }
             listeners.forEach { listener -> listener.onGpsData(); }
@@ -247,11 +276,18 @@ class GpsSender private constructor() {
                 { response ->
                     serverResponse.responseBody = response;
                     serverResponse.endUnixTimeMillis = System.currentTimeMillis();
-                    this.lastServerResponse = serverResponse;
                     synchronized(this.gpsDataQueue) {
-                        this.stats.postDataPoints += this.gpsDataQueue.count { it.unixTimeMillis <= lastDataUnixTime };
+                        var totalSent = 0;
+                        this.gpsDataQueue.filter { it.unixTimeMillis <= lastDataUnixTime }.forEach {
+                            it.isSent = true;
+                            totalSent++;
+                        }
+                        this.stats.postDataPoints += totalSent;
                         this.gpsDataQueue.removeIf { it.unixTimeMillis <= lastDataUnixTime }
+                        serverResponse.totalSent = totalSent;
                     }
+                    pushTimelineEvent(context, TimeLineEvent.TransmissionSuccess(serverResponse));
+                    this.lastServerResponse = serverResponse;
                     this.stats.postSuccess++;
                     listeners.forEach { it.onGpsPostResponse() }
                 },
@@ -267,6 +303,7 @@ class GpsSender private constructor() {
                         serverResponse.endUnixTimeMillis = System.currentTimeMillis();
                         this.stats.postFail++;
                     }
+                    pushTimelineEvent(context, TimeLineEvent.TransmissionFail(serverResponse));
                     this.lastServerResponse = serverResponse;
                     listeners.forEach { it.onGpsPostResponse() }
                 }

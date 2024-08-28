@@ -107,6 +107,7 @@ def post_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
             entry = datastore.Entity(key)
             data = gps_data._asdict()
             data["user_id"] = user_id
+            data = { k:v for k,v in data.items() if v != None }
             entry.update(data)
             client.put(entry)
     return f"", HTTPStatus.OK
