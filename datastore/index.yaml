@@ -2,5 +2,5 @@ indexes:
 - kind: gps
   properties:
   - name: user_id
-  - name: unix_time
+  - name: unix_time_millis
     direction: desc

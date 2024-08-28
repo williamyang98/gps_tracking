@@ -22,6 +22,16 @@ const hsv_to_rgb = (h, s, v) => {
   ];
 }
 
+const get_battery_symbol = (percentage, is_charging) => {
+  if (is_charging) {
+    return "⚡";
+  } else if (percentage > 50) {
+    return "🔋";
+  } else {
+    return "🪫";
+  }
+}
+
 export class App {
   constructor() {
     this.elems = {
@@ -34,9 +44,10 @@ export class App {
       "gps_points_show_all": document.getElementById("gps_points_show_all"),
       "gps_points_refresh": document.getElementById("gps_points_refresh"),
       "gps_points_render": document.getElementById("gps_points_render"),
+      "timeline_control_container": document.getElementById("timeline_control_container"),
+      "timeline_control": document.getElementById("timeline_control"),
       "settings": {
         "max_rows": document.getElementById("settings_max_rows"),
-        "timezone": document.getElementById("settings_timezone"),
         "zoom_level": document.getElementById("settings_zoom_level"),
         "stroke_hue": document.getElementById("settings_stroke_hue"),
         "stroke_weight": document.getElementById("settings_stroke_weight"),
@@ -48,8 +59,19 @@ export class App {
         "marker_opacity": document.getElementById("settings_marker_opacity"),
         "marker_opacity_falloff": document.getElementById("settings_marker_opacity_falloff"),
         "marker_outline": document.getElementById("settings_marker_outline"),
+        "show_info_popup": document.getElementById("settings_show_info_popup"),
+        "show_info_close": document.getElementById("settings_show_info_close"),
       },
     };
+    this.datetime_format = new Intl.DateTimeFormat(undefined, {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
     this.map = new google.maps.Map(this.elems.map, {
       zoom: 4,
       center: { lat: 0, lng: 0 },
@@ -66,6 +88,18 @@ export class App {
     this.selected_marker_index = null;
     this.bind_controls();
     this.load_users();
+  }
+
+  format_unix_time = (unix_time_millis) => {
+    let date = new Date(unix_time_millis);
+    let parts = this.datetime_format.formatToParts(date);
+    parts = parts.reduce((parts, part) => {
+      if (part.type !== "literal" || part.value.trim() !== ",") {
+        parts[part.type] = part.value;
+      }
+      return parts;
+    }, {});
+    return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
   }
 
   bind_controls = () => {
@@ -107,6 +141,12 @@ export class App {
       if (this.selected_marker_index >= (this.map_markers.length - 1)) return;
       this.select_marker(this.selected_marker_index+1);
     });
+    this.elems.timeline_control.addEventListener("input", (ev) => {
+      let index = Number(ev.target.value);
+      if (index != this.selected_marker_index) {
+        this.select_marker(index);
+      }
+    });
   }
 
   load_users = async () => {
@@ -139,25 +179,24 @@ export class App {
 
   load_user = async (user_id) => {
     let max_rows = Number(this.elems.settings.max_rows.value);
-    let timezone = Number(this.elems.settings.timezone.value);
-    let gps_points = await GpsApi.get_track({ user_id, max_rows, timezone });
+    let gps_points = await GpsApi.get_gps({ user_id, max_rows });
     // create html table
     let elem = this.elems.gps_points;
     elem.replaceChildren();
     if (gps_points.length === 0) {
       let row = document.createElement("tr");
-      row.innerHTML = "<td colspan=4><div class='text-center w-100'>No entries</div></td>";
+      row.innerHTML = "<td colspan=2><div class='text-center w-100'>No entries</div></td>";
       elem.appendChild(row);
       this.table_rows = [];
       return;
     }
     this.table_rows = gps_points.map((row, index) => {
       let row_elem = document.createElement("tr");
+      let date_string = this.format_unix_time(row.unix_time_millis);
+      var battery_symbol = get_battery_symbol(row.battery_percentage, row.battery_charging);
       row_elem.innerHTML = `
-        <td style='white-space: nowrap'>${row.name}</td>
-        <td>${row.latitude.toFixed(4)}</td>
-        <td>${row.longitude.toFixed(4)}</td>
-        <td>${row.altitude.toFixed(0)}</td>
+        <td style='white-space: nowrap'>${date_string}</td>
+        <td>${row.battery_percentage}% ${battery_symbol}</td>
       `;
       row_elem.addEventListener("click", (ev) => {
         ev.preventDefault();
@@ -169,6 +208,9 @@ export class App {
     this.gps_points = gps_points;
     this.map_points = gps_points.map(row => { return { lat: row.latitude, lng: row.longitude }; });
     // render track on map
+    this.elems.timeline_control.min = 0;
+    this.elems.timeline_control.max = Math.max(gps_points.length-1, 0);
+    this.elems.timeline_control.value = 0;
     this.render_track();
   }
 
@@ -244,7 +286,7 @@ export class App {
         let marker = new google.maps.Marker({
           map: map,
           position: { lat: row.latitude, lng: row.longitude },
-          title: row.name,
+          title: this.format_unix_time(row.unix_time_millis),
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: scale,
@@ -255,6 +297,7 @@ export class App {
           },
           optimized: true,
         });
+        marker.addListener("click", () => this.select_marker(index));
         return marker;
       })
       .reverse();
@@ -265,7 +308,7 @@ export class App {
     this.map_lines = [];
     this.map_markers.forEach(marker => marker.setMap(null));
     this.map_markers = [];
-    this.selected_marker_index = 0;
+    this.selected_marker_index = null;
     this.elems.gps_points_select_down.disabled = true;
     this.elems.gps_points_select_up.disabled = true;
     this.table_rows.forEach(row => row.classList.remove("selected"));
@@ -276,34 +319,21 @@ export class App {
     if (total === 0) return;
     if (index < 0) return;
     if (index >= total) return;
+    if (index === this.selected_marker_index) {
+      this.show_all_markers();
+      return;
+    }
+    this.elems.timeline_control.min = 0;
+    this.elems.timeline_control.max = total-1;
+    this.elems.timeline_control.value = index;
     this.selected_marker_index = index;
     this.elems.gps_points_select_up.disabled = (index == 0);
     this.elems.gps_points_select_down.disabled = (index >= (total-1));
-    let selected_marker = this.map_markers[index];
-    let selected_gps_point = this.gps_points[index];
-    let selected_map_point = this.map_points[index];
-    this.map_info.open({
-      anchor: selected_marker,
-      map: this.map,
-    });
-    this.map.setCenter(selected_map_point);
-    this.map_info.setContent(`
-      <style>
-        .gm-ui-hover-effect {
-          display: none !important;
-        }
-      </style>
-      <div style="margin: 2px">
-        <table>
-          <tbody>
-            <tr><td>Time</td><td>${selected_gps_point.name}</td></tr>
-            <tr><td>Latitude</td><td>${selected_gps_point.latitude.toFixed(6)}</td></tr>
-            <tr><td>Longitude</td><td>${selected_gps_point.longitude.toFixed(6)}</td></tr>
-            <tr><td>Altitude (m)</td><td>${selected_gps_point.altitude.toFixed(2)}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    `);
+    let marker = this.map_markers[index];
+    let gps_point = this.gps_points[index];
+    let map_point = this.map_points[index];
+    this.map.setCenter(map_point);
+    // show only selected marker
     for (let marker_index = 0; marker_index < total; marker_index++) {
       let marker = this.map_markers[marker_index];
       let table_row = this.table_rows[marker_index];
@@ -314,7 +344,79 @@ export class App {
         table_row.classList.remove("selected");
       }
       marker.setVisible(is_selected);
+      // marker.setOpacity(is_selected ? 1 : 0.2);
     }
+    // show info popup
+    if (!this.elems.settings.show_info_popup.checked) {
+      this.map_info.close();
+      return;
+    }
+    this.map_info.open({
+      anchor: marker,
+      map: this.map,
+    });
+    let date_string = this.format_unix_time(gps_point.unix_time_millis);
+    let rows = [];
+    let push_row = (label, body) => {
+      rows.push(`<tr><td>${label}</td><td>${body}</td></tr>`);
+    };
+    push_row("Time", `${date_string}`);
+    let battery_symbol = get_battery_symbol(gps_point.battery_percentage, gps_point.battery_charging);
+    push_row("Battery", `${gps_point.battery_percentage}% ${battery_symbol}`);
+    push_row("Latitude", gps_point.latitude.toFixed(6));
+    push_row("Longitude", gps_point.longitude.toFixed(6));
+    if (gps_point.accuracy !== null) {
+      push_row("Accuracy", `± ${gps_point.accuracy.toFixed(2)} m`);
+    }
+    if (gps_point.altitude !== null) {
+      let body = gps_point.altitude.toFixed(2);
+      if (gps_point.altitude_accuracy !== null) {
+        body += ` ± ${gps_point.altitude_accuracy.toFixed(2)}`;
+      }
+      push_row("Altitude", `${body} m`);
+    }
+    if (gps_point.msl_altitude !== null) {
+      let body = gps_point.msl_altitude.toFixed(2);
+      if (gps_point.msl_altitude_accuracy !== null) {
+        body += ` ± ${gps_point.msl_altitude_accuracy.toFixed(2)}`;
+      }
+      push_row("MSL Altitude", `${body} m`);
+    }
+    if (gps_point.speed !== null) {
+      let body = gps_point.speed.toFixed(2);
+      if (gps_point.speed_accuracy !== null) {
+        body += ` ± ${gps_point.speed_accuracy.toFixed(2)}`;
+      }
+      push_row("Speed", `${body} m/s`);
+    }
+    if (gps_point.bearing !== null) {
+      let body = gps_point.bearing.toFixed(2);
+      if (gps_point.bearing_accuracy !== null) {
+        body += ` ± ${gps_point.bearing_accuracy.toFixed(2)}`;
+      }
+      push_row("Bearing", `${body} °`);
+    }
+
+    var hide_close_button_html = "";
+    if (!this.elems.settings.show_info_close.checked) {
+      hide_close_button_html = `
+        <style>
+          .gm-ui-hover-effect {
+            display: none !important;
+          }
+        </style>
+      `;
+    }
+    this.map_info.setContent(`
+      ${hide_close_button_html}
+      <div style="margin: 2px">
+        <table>
+          <tbody>
+            ${rows.join("\n")}
+          </tbody>
+        </table>
+      </div>
+    `);
   }
 
   show_all_markers = () => {
@@ -327,6 +429,7 @@ export class App {
     for (let index = 0; index < total; index++) {
       let marker = this.map_markers[index];
       marker.setVisible(true);
+      // marker.setOpacity(1);
       let table_row = this.table_rows[index];
       table_row.classList.remove("selected");
     };

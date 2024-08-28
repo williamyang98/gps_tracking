@@ -5,15 +5,38 @@ import functions_framework
 from google.cloud import datastore
 import struct
 
-GPS_Data = namedtuple("GPS_Data", ["user_id", "unix_time", "latitude", "longitude", "altitude"])
+GPS_Data = namedtuple("GPS_Data", [
+    "user_id",
+    "unix_time_millis",
+    "battery_percentage",
+    "battery_charging",
+    "latitude", "longitude", "accuracy",
+    "altitude", "altitude_accuracy",
+    "msl_altitude", "msl_altitude_accuracy",
+    "speed", "speed_accuracy",
+    "bearing", "bearing_accuracy",
+])
+
+gps_data_field_types = [
+    int, # user_id
+    int, # unix_time_millis
+    int, # battery_percentage
+    bool, # battery_charging
+    float, float, float, # latitude, longitude, accuracy
+    float, float, # altitude, altitude_accuracy
+    float, float, # msl_altitude, msl_altitude_accuracy
+    float, float, # speed, speed_accuracy
+    float, float, # bearing, bearing_accuracy
+]
 
 def datastore_to_gps_data(entry):
-    user_id = int(entry["user_id"])
-    unix_time = int(entry["unix_time"])
-    latitude = float(entry["latitude"])
-    longitude = float(entry["longitude"])
-    altitude = float(entry["altitude"])
-    return GPS_Data(user_id, unix_time, latitude, longitude, altitude)
+    field_data = []
+    for field, field_type in zip(GPS_Data._fields, gps_data_field_types):
+        data = entry.get(field, None)
+        if data != None:
+            data = field_type(data)
+        field_data.append(data)
+    return GPS_Data(*field_data)
 
 def enable_cors(endpoint):
     # https://cloud.google.com/functions/docs/samples/functions-http-cors
@@ -62,7 +85,7 @@ def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
     query = client.query(kind="gps")
     if user_id != None:
         query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
-    query.order = ["-unix_time"]
+    query.order = ["-unix_time_millis"]
     results = query.fetch(limit=max_rows)
 
     def create_csv(results):
@@ -70,7 +93,7 @@ def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
         yield '\n'
         for row in results:
             data = datastore_to_gps_data(row)
-            yield ','.join(map(str, data))
+            yield ','.join(map(lambda x: str(x) if x != None else "", data))
             yield '\n'
 
     res = flask.make_response((create_csv(results), HTTPStatus.OK))

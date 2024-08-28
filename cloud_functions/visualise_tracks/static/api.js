@@ -2,22 +2,44 @@ const GPS_API_URL = "https://australia-southeast1-gps-tracking-433211.cloudfunct
 
 const parse_csv = (data) => {
   return data
-  	.split("\n")
+    .split("\n")
     .map(row => row.trim())
+    .filter(row => row.length > 0)
     .map(row => row
-    	.split(",")
-    	.map(col => col.trim())
-      .filter(col => col.length > 0)
+      .split(",")
+      .map(col => col.trim())
+      .map(col => (col.length === 0) ? null : col)
     )
     .filter(row => row.length > 0);
 }
 
-export class TrackPoint {
-  constructor(name, latitude, longitude, altitude) {
-    this.name = name
+export class GpsPoint {
+  constructor(
+    user_id,
+    unix_time_millis,
+    battery_percentage,
+    battery_charging,
+    latitude, longitude, accuracy,
+    altitude, altitude_accuracy,
+    msl_altitude, msl_altitude_accuracy,
+    speed, speed_accuracy,
+    bearing, bearing_accuracy,
+  ) {
+    this.user_id = user_id;
+    this.unix_time_millis = unix_time_millis;
+    this.battery_percentage = battery_percentage;
+    this.battery_charging = battery_charging;
     this.latitude = latitude;
     this.longitude = longitude;
+    this.accuracy = accuracy;
     this.altitude = altitude;
+    this.altitude_accuracy = altitude_accuracy;
+    this.msl_altitude = msl_altitude;
+    this.msl_altitude_accuracy = msl_altitude_accuracy;
+    this.speed = speed;
+    this.speed_accuracy = speed_accuracy;
+    this.bearing = bearing;
+    this.bearing_accuracy = bearing_accuracy;
   }
 }
 
@@ -47,24 +69,65 @@ export class User {
 }
 
 export class GpsApi {
-  static get_track = async ({ user_id, max_rows=128, timezone=10 }) => {
+  static get_gps = async ({ user_id, max_rows=128 }) => {
     let params = [];
     params.push(`user_id=${encodeURIComponent(user_id)}`);
     params.push(`max_rows=${encodeURIComponent(max_rows)}`);
-    params.push(`timezone=${encodeURIComponent(timezone)}`);
-    let base_url = `${GPS_API_URL}/get-track`;
+    let base_url = `${GPS_API_URL}/get-gps`;
     let url = `${base_url}?${params.join("&")}`;
     let response = await fetch(url);
     let body = await response.text();
     let csv_data = parse_csv(body);
     let gps_points = convert_csv_to_objects(
       csv_data,
-      ["name", "latitude", "longitude", "alt"],
-      ([name, latitude, longitude, altitude]) => {
+      [
+        "user_id",
+        "unix_time_millis",
+        "battery_percentage",
+        "battery_charging",
+        "latitude", "longitude", "accuracy",
+        "altitude", "altitude_accuracy",
+        "msl_altitude", "msl_altitude_accuracy",
+        "speed", "speed_accuracy",
+        "bearing", "bearing_accuracy",
+      ],
+      ([
+        user_id,
+        unix_time_millis,
+        battery_percentage,
+        battery_charging,
+        latitude, longitude, accuracy,
+        altitude, altitude_accuracy,
+        msl_altitude, msl_altitude_accuracy,
+        speed, speed_accuracy,
+        bearing, bearing_accuracy,
+      ]) => {
+        user_id = Number(user_id);
+        unix_time_millis = Number(unix_time_millis);
+        battery_percentage = Number(battery_percentage);
+        battery_charging = Boolean(battery_charging);
         latitude = Number(latitude);
         longitude = Number(longitude);
-        altitude = Number(altitude);
-        return new TrackPoint(name, latitude, longitude, altitude);
+        accuracy = (accuracy !== null) ? Number(accuracy) : null;
+        altitude = (altitude !== null) ? Number(altitude) : null;
+        altitude_accuracy = (altitude_accuracy !== null) ? Number(altitude_accuracy) : null;
+        msl_altitude = (msl_altitude !== null) ? Number(msl_altitude) : null;
+        msl_altitude_accuracy = (msl_altitude_accuracy !== null) ? Number(msl_altitude_accuracy) : null;
+        speed = (speed !== null) ? Number(speed) : null;
+        speed_accuracy = (speed_accuracy !== null) ? Number(speed_accuracy) : null;
+        bearing = (bearing !== null) ? Number(bearing) : null;
+        bearing_accuracy = (bearing_accuracy !== null) ? Number(bearing_accuracy) : null;
+        return new GpsPoint(
+          user_id,
+          unix_time_millis,
+          battery_percentage,
+          battery_charging,
+          latitude, longitude, accuracy,
+          altitude, altitude_accuracy,
+          msl_altitude, msl_altitude_accuracy,
+          speed, speed_accuracy,
+          bearing, bearing_accuracy,
+        );
       },
     );
     return gps_points;

@@ -19,7 +19,7 @@ def main():
         seconds_in_day = 60*60*24
         cutoff_time = unix_time - args.older_than_days*seconds_in_day
         query.add_filter(filter=datastore.query.PropertyFilter("unix_time", "<", cutoff_time))
-    query.order = ["-unix_time"]
+    query.order = ["-unix_time_millis"]
     results = query.fetch()
 
     del_keys = [row.key for row in results]
