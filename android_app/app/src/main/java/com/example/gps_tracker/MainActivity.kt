@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -202,7 +203,7 @@ class MainActivity : ComponentActivity() {
                         val isSelected = currentDestination?.hierarchy?.any { it.route == navRoute.route } == true
                         NavigationBarItem(
                             icon = { Icon(navRoute.icon, contentDescription=navRoute.label) },
-                            label = { Text(text=navRoute.label) },
+                            // label = { Text(text=navRoute.label) },
                             selected = isSelected,
                             onClick = {
                                 navController.navigate(navRoute.route) {
@@ -368,6 +369,8 @@ class MainActivity : ComponentActivity() {
         var timelineEventData by remember { mutableStateOf<TimelineEventData?>(null) }
 
         Column(modifier=Modifier.fillMaxWidth()) {
+            // LineItem adds in an annoying 16dp between heading and first item that we don't want
+            Spacer(modifier=Modifier.height(16.dp))
             Row(modifier=Modifier.fillMaxWidth()) {
                 Text(
                     text="Timeline",
@@ -375,7 +378,7 @@ class MainActivity : ComponentActivity() {
                     textAlign= TextAlign.Center,
                     modifier= Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal=16.dp, vertical=0.dp),
                 )
             }
             LazyColumn(modifier= Modifier.fillMaxWidth()) {
@@ -490,6 +493,7 @@ class MainActivity : ComponentActivity() {
                 }
                 if (timeline.isEmpty()) {
                     item {
+                        Spacer(modifier=Modifier.height(16.dp))
                         Text(
                             text="No events to display",
                             style=MaterialTheme.typography.bodyLarge,
@@ -588,6 +592,8 @@ class MainActivity : ComponentActivity() {
         val gpsSender = GpsSender.getInstance();
 
         Column(modifier= Modifier.fillMaxWidth()) {
+            // LineItem adds in an annoying 16dp between heading and first item that we don't want
+            Spacer(modifier=Modifier.height(16.dp))
             Row(modifier=Modifier.fillMaxWidth()) {
                 Text(
                     text="Location",
@@ -595,7 +601,7 @@ class MainActivity : ComponentActivity() {
                     textAlign= TextAlign.Center,
                     modifier= Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp, vertical = 0.dp),
                 )
             }
 
@@ -683,6 +689,8 @@ class MainActivity : ComponentActivity() {
     private fun renderPermissions() {
         val self = this;
         Column(modifier=Modifier.fillMaxWidth()) {
+            // LineItem adds in an annoying 16dp between heading and first item that we don't want
+            Spacer(modifier=Modifier.height(16.dp))
             Row(modifier=Modifier.fillMaxWidth()) {
                 Text(
                     text="Permissions",
@@ -690,7 +698,7 @@ class MainActivity : ComponentActivity() {
                     textAlign= TextAlign.Center,
                     modifier= Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal=16.dp, vertical=0.dp),
                 )
             }
             LazyColumn(modifier= Modifier.fillMaxSize()) {
