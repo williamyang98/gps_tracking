@@ -2,11 +2,9 @@ package com.example.gps_tracker
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -15,21 +13,16 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -40,29 +33,57 @@ class SettingsComposable private constructor() {
     //private var stringEditFields = mutableMapOf<String, String>();
 
     companion object {
-        @Volatile private var instance: SettingsComposable? = null // Volatile modifier is necessary
-        fun getInstance() = instance ?: synchronized(this) { // synchronized to avoid concurrency problem
-            instance ?: SettingsComposable().also { instance = it }
-        }
+        @Volatile
+        private var instance: SettingsComposable? = null // Volatile modifier is necessary
+        fun getInstance() =
+            instance ?: synchronized(this) { // synchronized to avoid concurrency problem
+                instance ?: SettingsComposable().also { instance = it }
+            }
     }
 
     @Composable
-    fun render(settings: Settings, onChange: () -> Unit = {}) {
+    fun Render(settings: Settings, onChange: () -> Unit = {}) {
         Column(
-            modifier=Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Row(modifier=Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text="Settings",
-                    style=MaterialTheme.typography.displayMedium,
-                    textAlign= TextAlign.Center,
-                    modifier=Modifier.fillMaxWidth().padding(16.dp),
+                    text = "Settings",
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 )
             }
-            editInteger("User ID", Icons.Filled.Face, { -> settings.userId }, { v -> settings.userId = v }, onChange);
-            editString("User Name",  Icons.Filled.AccountBox, { -> settings.userName }, { v -> settings.userName = v }, onChange);
-            editInteger("Interval (minutes)", Icons.Filled.DateRange, { -> settings.interval }, { v -> settings.interval = v }, onChange)
-            editInteger("Timeline Length", Icons.Filled.List, { -> settings.timelineLength }, { v -> settings.timelineLength = v }, onChange)
+            editInteger(
+                "User ID",
+                Icons.Filled.Face,
+                { -> settings.userId },
+                { v -> settings.userId = v },
+                onChange
+            );
+            editString(
+                "User Name",
+                Icons.Filled.AccountBox,
+                { -> settings.userName },
+                { v -> settings.userName = v },
+                onChange
+            );
+            editInteger(
+                "Interval (minutes)",
+                Icons.Filled.DateRange,
+                { -> settings.interval },
+                { v -> settings.interval = v },
+                onChange
+            )
+            editInteger(
+                "Timeline Length",
+                Icons.Filled.List,
+                { -> settings.timelineLength },
+                { v -> settings.timelineLength = v },
+                onChange
+            )
             editBoolean(
                 "Autostart",
                 "Start background service on open",
@@ -75,52 +96,24 @@ class SettingsComposable private constructor() {
     }
 
     @Composable
-    private fun editString(name: String, icon: ImageVector?, get: () -> String, set: (String) -> Unit, onChange: () -> Unit) {
+    private fun editString(
+        name: String,
+        icon: ImageVector?,
+        get: () -> String,
+        set: (String) -> Unit,
+        onChange: () -> Unit
+    ) {
         val focusManager = LocalFocusManager.current;
         OutlinedTextField(
-            singleLine=true,
-            label={ Text(text=name) },
-            value=get(),
-            onValueChange={ set(it); onChange(); },
-            keyboardOptions= KeyboardOptions.Default.copy(
-                keyboardType= KeyboardType.Text,
-                imeAction= ImeAction.Done,
-            ),
-            keyboardActions=KeyboardActions(
-              onDone = {
-                  focusManager.clearFocus();
-              }
-            ),
-            leadingIcon = {
-                icon?.let {
-                    Icon(
-                        imageVector = it,
-                        contentDescription = null,
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp, vertical=8.dp),
-        )
-    }
-    @Composable
-    private fun editInteger(name: String, icon: ImageVector?, get: () -> Int, set: (Int) -> Unit, onChange: () -> Unit) {
-        val focusManager = LocalFocusManager.current;
-        OutlinedTextField(
-            singleLine=true,
-            label={ Text(text=name) },
-            value = integerEditFields[name] ?: get().toString(),
-            onValueChange = {
-                integerEditFields[name] = it;
-                it.toIntOrNull()?.apply {
-                    set(this);
-                    onChange();
-                }
-            },
+            singleLine = true,
+            label = { Text(text = name) },
+            value = get(),
+            onValueChange = { set(it); onChange(); },
             keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Number,
+                keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done,
             ),
-            keyboardActions=KeyboardActions(
+            keyboardActions = KeyboardActions(
                 onDone = {
                     focusManager.clearFocus();
                 }
@@ -133,27 +126,79 @@ class SettingsComposable private constructor() {
                     )
                 }
             },
-            modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp, vertical=8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 
     @Composable
-    private fun editBoolean(name: String, description: String?, icon: ImageVector?, get: () -> Boolean, set: (Boolean) -> Unit, onChange: () -> Unit) {
+    private fun editInteger(
+        name: String,
+        icon: ImageVector?,
+        get: () -> Int,
+        set: (Int) -> Unit,
+        onChange: () -> Unit
+    ) {
+        val focusManager = LocalFocusManager.current;
+        OutlinedTextField(
+            singleLine = true,
+            label = { Text(text = name) },
+            value = integerEditFields[name] ?: get().toString(),
+            onValueChange = {
+                integerEditFields[name] = it;
+                it.toIntOrNull()?.apply {
+                    set(this);
+                    onChange();
+                }
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus();
+                }
+            ),
+            leadingIcon = {
+                icon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                    )
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+
+    @Composable
+    private fun editBoolean(
+        name: String,
+        description: String?,
+        icon: ImageVector?,
+        get: () -> Boolean,
+        set: (Boolean) -> Unit,
+        onChange: () -> Unit
+    ) {
         ListItem(
             leadingContent = {
-              icon?.let {
-                  Icon(
-                      imageVector = it,
-                      contentDescription = null,
-                  )
-              }
+                icon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                    )
+                }
             },
-            headlineContent = { Text(text=name) },
-            supportingContent = { description?.let { Text(text=it) } },
+            headlineContent = { Text(text = name) },
+            supportingContent = { description?.let { Text(text = it) } },
             trailingContent = {
                 Switch(
-                    checked=get(),
-                    onCheckedChange={
+                    checked = get(),
+                    onCheckedChange = {
                         set(it);
                         onChange();
                     }

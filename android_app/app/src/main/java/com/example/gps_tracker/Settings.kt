@@ -16,6 +16,7 @@ private class Keys {
 
 class Settings(context: Context) {
     private val prefs: SharedPreferences;
+
     init {
         prefs = PreferenceManager.getDefaultSharedPreferences(context.applicationContext);
     }

@@ -12,13 +12,9 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,13 +24,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Home
@@ -45,27 +38,24 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,10 +70,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.gps_tracker.ui.theme.Gps_trackerTheme
-import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private const val TAG: String = "main_activity";
@@ -98,6 +84,7 @@ private sealed class NavRouteNames {
         const val SETTINGS = "settings";
     }
 }
+
 private val navRoutes = arrayOf(
     NavRoute(Icons.Outlined.Home, "Home", NavRouteNames.HOME),
     NavRoute(Icons.Outlined.List, "Timeline", NavRouteNames.TIMELINE),
@@ -110,8 +97,8 @@ private val navRoutes = arrayOf(
 private val FORMAT_DATETIME = DateTimeFormatter.ofPattern("yy/MM/dd HH:mm:ss")
 
 private sealed class TimelineEventData {
-    data class Measurement(val gpsData: GpsData): TimelineEventData()
-    data class Transmission(val serverResponse: ServerResponse): TimelineEventData()
+    data class Measurement(val gpsData: GpsData) : TimelineEventData()
+    data class Transmission(val serverResponse: ServerResponse) : TimelineEventData()
 }
 
 class MainActivity : ComponentActivity() {
@@ -119,23 +106,30 @@ class MainActivity : ComponentActivity() {
     private lateinit var settings: Settings;
     private var gpsService: BackgroundService? = null;
 
-    private val listenGpsSender = object: GpsSenderListener {
+    private val listenGpsSender = object : GpsSenderListener {
         override fun onGpsData() {
             renderView();
         }
+
         override fun onGpsPostResponse() {
             renderView();
         }
+
         override fun onUserRegister(success: Boolean, name: String, id: Int) {
             if (success) {
-                Toast.makeText(applicationContext, "Registered '$name' @ $id", Toast.LENGTH_SHORT).show();
+                Toast.makeText(applicationContext, "Registered '$name' @ $id", Toast.LENGTH_SHORT)
+                    .show();
             } else {
-                Toast.makeText(applicationContext, "Failed to register username", Toast.LENGTH_SHORT).show();
+                Toast.makeText(
+                    applicationContext,
+                    "Failed to register username",
+                    Toast.LENGTH_SHORT
+                ).show();
             }
         }
     }
 
-    private val gpsServiceConnection = object: ServiceConnection {
+    private val gpsServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, ibinder: IBinder) {
             val binder = ibinder as BackgroundService.LocalBinder;
             gpsService = binder.getService();
@@ -184,25 +178,26 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             Gps_trackerTheme {
-                render();
+                Render();
             }
         }
     }
 
     @Composable
-    private fun render() {
+    private fun Render() {
         val navController = rememberNavController();
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
         // https://developer.android.com/develop/ui/compose/navigation#bottom-nav
         Scaffold(
-            bottomBar={
+            bottomBar = {
                 NavigationBar {
                     navRoutes.forEach { navRoute ->
-                        val isSelected = currentDestination?.hierarchy?.any { it.route == navRoute.route } == true
+                        val isSelected =
+                            currentDestination?.hierarchy?.any { it.route == navRoute.route } == true
                         NavigationBarItem(
-                            icon = { Icon(navRoute.icon, contentDescription=navRoute.label) },
+                            icon = { Icon(navRoute.icon, contentDescription = navRoute.label) },
                             // label = { Text(text=navRoute.label) },
                             selected = isSelected,
                             onClick = {
@@ -219,50 +214,50 @@ class MainActivity : ComponentActivity() {
                 }
             }
         ) { innerPadding ->
-            NavHost(navController, startDestination="home", Modifier.padding(innerPadding)) {
-                composable(NavRouteNames.HOME) { renderHome() }
-                composable(NavRouteNames.TIMELINE) { renderTimeline() }
-                composable(NavRouteNames.LOCATION) { renderLocation() }
-                composable(NavRouteNames.PERMISSIONS) { renderPermissions() }
-                composable(NavRouteNames.SETTINGS) { renderSettings() }
+            NavHost(navController, startDestination = "home", Modifier.padding(innerPadding)) {
+                composable(NavRouteNames.HOME) { RenderHome() }
+                composable(NavRouteNames.TIMELINE) { RenderTimeline() }
+                composable(NavRouteNames.LOCATION) { RenderLocation() }
+                composable(NavRouteNames.PERMISSIONS) { RenderPermissions() }
+                composable(NavRouteNames.SETTINGS) { RenderSettings() }
             }
         }
     }
 
     @Composable
-    private fun renderHome() {
+    private fun RenderHome() {
         val self = this;
         val gpsSender = GpsSender.getInstance();
-        Column(modifier= Modifier.fillMaxWidth()) {
-            Row(modifier=Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text="Home",
-                    style=MaterialTheme.typography.displayMedium,
-                    textAlign= TextAlign.Center,
-                    modifier= Modifier
+                    text = "Home",
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                 )
             }
             Row {
                 Text(
-                    text="Background Service",
-                    style= MaterialTheme.typography.titleLarge,
-                    modifier=Modifier.padding(horizontal=16.dp, vertical=4.dp),
+                    text = "Background Service",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             ListItem(
                 headlineContent = {
-                    Text(text="Run in background")
+                    Text(text = "Run in background")
                 },
                 supportingContent = {
-                    Text(text="GPS updates will be sent in background")
+                    Text(text = "GPS updates will be sent in background")
                 },
                 trailingContent = {
                     val isEnabled = BackgroundService.getIsStarted(self);
                     Switch(
                         checked = isEnabled,
-                        onCheckedChange={
+                        onCheckedChange = {
                             if (!isEnabled) {
                                 BackgroundService.start(self);
                                 self.renderView();
@@ -293,16 +288,16 @@ class MainActivity : ComponentActivity() {
             )
             ListItem(
                 headlineContent = {
-                    Text(text="Service status")
+                    Text(text = "Service status")
                 },
                 supportingContent = {
-                    Text(text="Service is active and bound to application")
+                    Text(text = "Service is active and bound to application")
                 },
                 trailingContent = {
                     val isEnabled = (gpsService != null);
                     Switch(
                         checked = isEnabled,
-                        onCheckedChange={},
+                        onCheckedChange = {},
                         thumbContent = if (isEnabled) {
                             {
                                 Icon(
@@ -324,12 +319,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             )
-            HorizontalDivider(modifier=Modifier.padding(bottom=8.dp))
+            HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
             Row {
                 Text(
-                    text="Statistics",
-                    style= MaterialTheme.typography.titleLarge,
-                    modifier=Modifier.padding(horizontal=16.dp, vertical=4.dp),
+                    text = "Statistics",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             Row {
@@ -338,12 +333,12 @@ class MainActivity : ComponentActivity() {
                         item {
                             ListItem(
                                 headlineContent = {
-                                    Text(text=label)
+                                    Text(text = label)
                                 },
                                 trailingContent = {
                                     Text(
-                                        text=body,
-                                        style=MaterialTheme.typography.bodyLarge,
+                                        text = body,
+                                        style = MaterialTheme.typography.bodyLarge,
                                     )
                                 },
                             )
@@ -361,27 +356,26 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun renderTimeline() {
+    private fun RenderTimeline() {
         val gpsSender = GpsSender.getInstance();
         val timeline = gpsSender.gpsDataTimeline;
         val sheetState = rememberModalBottomSheetState()
-        val scope = rememberCoroutineScope()
         var timelineEventData by remember { mutableStateOf<TimelineEventData?>(null) }
 
-        Column(modifier=Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             // LineItem adds in an annoying 16dp between heading and first item that we don't want
-            Spacer(modifier=Modifier.height(16.dp))
-            Row(modifier=Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text="Timeline",
-                    style=MaterialTheme.typography.displayMedium,
-                    textAlign= TextAlign.Center,
-                    modifier= Modifier
+                    text = "Timeline",
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal=16.dp, vertical=0.dp),
+                        .padding(horizontal = 16.dp, vertical = 0.dp),
                 )
             }
-            LazyColumn(modifier= Modifier.fillMaxWidth()) {
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 timeline.forEach {
                     item {
                         when (it) {
@@ -394,7 +388,13 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = null,
                                         )
                                     },
-                                    headlineContent = { Text(text=ev.localDateTime.format(FORMAT_DATETIME)) },
+                                    headlineContent = {
+                                        Text(
+                                            text = ev.localDateTime.format(
+                                                FORMAT_DATETIME
+                                            )
+                                        )
+                                    },
                                     trailingContent = {
                                         Icon(
                                             imageVector = Icons.Outlined.Close,
@@ -404,6 +404,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                 )
                             }
+
                             is TimeLineEvent.MeasurementSuccess -> {
                                 val ev = it.gpsData;
                                 ListItem(
@@ -413,9 +414,22 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = null,
                                         )
                                     },
-                                    headlineContent = { Text(text=ev.localDateTime.format(FORMAT_DATETIME)) },
+                                    headlineContent = {
+                                        Text(
+                                            text = ev.localDateTime.format(
+                                                FORMAT_DATETIME
+                                            )
+                                        )
+                                    },
                                     supportingContent = {
-                                        Text(text="${String.format("%.6f", ev.latitude)},${String.format("%.6f", ev.longitude)}")
+                                        Text(
+                                            text = "${
+                                                String.format(
+                                                    "%.6f",
+                                                    ev.latitude
+                                                )
+                                            },${String.format("%.6f", ev.longitude)}"
+                                        )
                                     },
                                     trailingContent = {
                                         if (ev.isSent) {
@@ -432,11 +446,12 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     },
-                                    modifier = Modifier.clickable(onClick={
+                                    modifier = Modifier.clickable(onClick = {
                                         timelineEventData = TimelineEventData.Measurement(ev);
                                     }),
                                 )
                             }
+
                             is TimeLineEvent.TransmissionSuccess -> {
                                 val ev = it.serverResponse;
                                 ListItem(
@@ -446,9 +461,15 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = null,
                                         )
                                     },
-                                    headlineContent = { Text(text= ev.endLocalDateTime.format(FORMAT_DATETIME)) },
+                                    headlineContent = {
+                                        Text(
+                                            text = ev.endLocalDateTime.format(
+                                                FORMAT_DATETIME
+                                            )
+                                        )
+                                    },
                                     supportingContent = {
-                                        Text(text="${ev.statusCode} ${ev.responseBody}")
+                                        Text(text = "${ev.statusCode} ${ev.responseBody}")
                                     },
                                     trailingContent = {
                                         Icon(
@@ -457,11 +478,12 @@ class MainActivity : ComponentActivity() {
                                             tint = Color.Green,
                                         )
                                     },
-                                    modifier = Modifier.clickable(onClick={
+                                    modifier = Modifier.clickable(onClick = {
                                         timelineEventData = TimelineEventData.Transmission(ev);
                                     }),
                                 )
                             }
+
                             is TimeLineEvent.TransmissionFail -> {
                                 val ev = it.serverResponse;
                                 ListItem(
@@ -471,9 +493,15 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = null,
                                         )
                                     },
-                                    headlineContent = { Text(text= ev.endLocalDateTime.format(FORMAT_DATETIME)) },
+                                    headlineContent = {
+                                        Text(
+                                            text = ev.endLocalDateTime.format(
+                                                FORMAT_DATETIME
+                                            )
+                                        )
+                                    },
                                     supportingContent = {
-                                        Text(text="${ev.statusCode ?: "Request not sent"}")
+                                        Text(text = "${ev.statusCode ?: "Request not sent"}")
                                     },
                                     trailingContent = {
                                         Icon(
@@ -482,7 +510,7 @@ class MainActivity : ComponentActivity() {
                                             tint = Color.Red,
                                         )
                                     },
-                                    modifier = Modifier.clickable(onClick={
+                                    modifier = Modifier.clickable(onClick = {
                                         timelineEventData = TimelineEventData.Transmission(ev);
                                     }),
                                 )
@@ -493,12 +521,12 @@ class MainActivity : ComponentActivity() {
                 }
                 if (timeline.isEmpty()) {
                     item {
-                        Spacer(modifier=Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text="No events to display",
-                            style=MaterialTheme.typography.bodyLarge,
-                            textAlign= TextAlign.Center,
-                            modifier= Modifier.fillMaxWidth()
+                            text = "No events to display",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -509,12 +537,12 @@ class MainActivity : ComponentActivity() {
                         timelineEventData = null;
                     },
                     sheetState = sheetState,
-                    modifier=Modifier.fillMaxHeight(),
+                    modifier = Modifier.fillMaxHeight(),
                 ) {
                     when (it) {
                         is TimelineEventData.Measurement -> {
                             val ev = it.gpsData;
-                            LazyColumn(modifier=Modifier.fillMaxSize()) {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
                                 val pushRow: (String, String) -> Unit = { label, body ->
                                     item {
                                         ListItem(
@@ -531,21 +559,38 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 pushRow("Time", ev.localDateTime.format(FORMAT_DATETIME))
-                                val batteryCharging = if (ev.batteryCharging) { "Charging" } else { "Discharging" };
+                                val batteryCharging = if (ev.batteryCharging) {
+                                    "Charging"
+                                } else {
+                                    "Discharging"
+                                };
                                 pushRow("Battery", "${ev.batteryPercentage}% (${batteryCharging})")
                                 pushRow("Latitude", "${ev.latitude}")
                                 pushRow("Longitude", "${ev.longitude}")
                                 pushRow("Accuracy", "${ev.accuracy ?: "?"} m")
-                                pushRow("Altitude", "${ev.altitude ?: "?"} ± ${ev.altitudeAccuracy ?: "?"} m")
-                                pushRow("MSL Altitude", "${ev.mslAltitude ?: "?"} ± ${ev.mslAltitudeAccuracy ?: "?"} m")
-                                pushRow("Speed", "${ev.speed ?: "?"} ± ${ev.speedAccuracy ?: "?"} m/s")
-                                pushRow("Bearing", "${ev.bearing ?: "?"} ± ${ev.bearingAccuracy ?: "?"} °")
+                                pushRow(
+                                    "Altitude",
+                                    "${ev.altitude ?: "?"} ± ${ev.altitudeAccuracy ?: "?"} m"
+                                )
+                                pushRow(
+                                    "MSL Altitude",
+                                    "${ev.mslAltitude ?: "?"} ± ${ev.mslAltitudeAccuracy ?: "?"} m"
+                                )
+                                pushRow(
+                                    "Speed",
+                                    "${ev.speed ?: "?"} ± ${ev.speedAccuracy ?: "?"} m/s"
+                                )
+                                pushRow(
+                                    "Bearing",
+                                    "${ev.bearing ?: "?"} ± ${ev.bearingAccuracy ?: "?"} °"
+                                )
                                 pushRow("Is Submitted", "${ev.isSent}")
                             }
                         }
+
                         is TimelineEventData.Transmission -> {
                             val ev = it.serverResponse;
-                            LazyColumn(modifier=Modifier.fillMaxSize()) {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
                                 val pushRow: (String, String) -> Unit = { label, body ->
                                     item {
                                         ListItem(
@@ -568,12 +613,21 @@ class MainActivity : ComponentActivity() {
                                 val responseLength = ev.responseBody?.length ?: 4;
                                 if (responseLength > 10) {
                                     item {
-                                        Text(text="Response Body", modifier=Modifier.padding(horizontal=16.dp, vertical=16.dp))
+                                        Text(
+                                            text = "Response Body",
+                                            modifier = Modifier.padding(
+                                                horizontal = 16.dp,
+                                                vertical = 16.dp
+                                            )
+                                        )
                                     }
                                     item {
                                         Text(
-                                            text="${ev.responseBody}",
-                                            modifier=Modifier.padding(horizontal=16.dp, vertical=0.dp),
+                                            text = "${ev.responseBody}",
+                                            modifier = Modifier.padding(
+                                                horizontal = 16.dp,
+                                                vertical = 0.dp
+                                            ),
                                         )
                                     }
                                 } else {
@@ -588,24 +642,24 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun renderLocation() {
+    private fun RenderLocation() {
         val gpsSender = GpsSender.getInstance();
 
-        Column(modifier= Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             // LineItem adds in an annoying 16dp between heading and first item that we don't want
-            Spacer(modifier=Modifier.height(16.dp))
-            Row(modifier=Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text="Location",
-                    style=MaterialTheme.typography.displayMedium,
-                    textAlign= TextAlign.Center,
-                    modifier= Modifier
+                    text = "Location",
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 0.dp),
                 )
             }
 
-            LazyColumn(modifier=Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
                 val pushRow: (String, String) -> Unit = { label, body ->
                     item {
                         ListItem(
@@ -625,15 +679,15 @@ class MainActivity : ComponentActivity() {
                     ListItem(
                         headlineContent = {
                             Text(
-                                text="GPS Sensor",
-                                style= MaterialTheme.typography.titleLarge,
+                                text = "GPS Sensor",
+                                style = MaterialTheme.typography.titleLarge,
                             )
                         },
                         trailingContent = {
                             IconButton(onClick = {
                                 gpsSender.refreshLocation(gpsSenderContext);
                             }) {
-                                Icon(Icons.Outlined.Refresh, contentDescription="Refresh")
+                                Icon(Icons.Outlined.Refresh, contentDescription = "Refresh")
                             }
                         },
                     )
@@ -641,39 +695,45 @@ class MainActivity : ComponentActivity() {
                 pushRow("Time", "${gpsSender.lastGpsData?.localDateTime?.format(FORMAT_DATETIME)}")
                 pushRow("Latitude", "${gpsSender.lastGpsData?.latitude}")
                 pushRow("Longitude", "${gpsSender.lastGpsData?.longitude}")
-                item { HorizontalDivider(modifier=Modifier.padding(bottom=8.dp)) }
+                item { HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp)) }
                 item {
                     ListItem(
                         headlineContent = {
                             Text(
-                                text="Server Response",
-                                style= MaterialTheme.typography.titleLarge,
+                                text = "Server Response",
+                                style = MaterialTheme.typography.titleLarge,
                             )
                         },
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { gpsSender.registerUserId(gpsSenderContext) }) {
-                                    Icon(Icons.Outlined.Person, contentDescription="Register")
+                                    Icon(Icons.Outlined.Person, contentDescription = "Register")
                                 }
                                 IconButton(onClick = { gpsSender.postGPS(gpsSenderContext) }) {
-                                    Icon(Icons.Outlined.Send, contentDescription="Refresh")
+                                    Icon(Icons.Outlined.Send, contentDescription = "Refresh")
                                 }
                             }
                         },
                     )
                 }
-                pushRow("Time", "${gpsSender.lastServerResponse?.endLocalDateTime?.format(FORMAT_DATETIME)}")
+                pushRow(
+                    "Time",
+                    "${gpsSender.lastServerResponse?.endLocalDateTime?.format(FORMAT_DATETIME)}"
+                )
                 pushRow("Status Code", "${gpsSender.lastServerResponse?.statusCode}")
                 pushRow("Total Sent", "${gpsSender.lastServerResponse?.totalSent}")
                 val responseBodyLength = gpsSender.lastServerResponse?.responseBody?.length ?: 4;
                 if (responseBodyLength > 10) {
                     item {
-                        Text(text="Response Body", modifier=Modifier.padding(horizontal=16.dp, vertical=16.dp))
+                        Text(
+                            text = "Response Body",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                        )
                     }
                     item {
                         Text(
-                            text="${gpsSender.lastServerResponse?.responseBody}",
-                            modifier=Modifier.padding(horizontal=16.dp, vertical=0.dp),
+                            text = "${gpsSender.lastServerResponse?.responseBody}",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
                         )
                     }
                 } else {
@@ -684,36 +744,42 @@ class MainActivity : ComponentActivity() {
     }
 
 
-
     @Composable
-    private fun renderPermissions() {
+    private fun RenderPermissions() {
         val self = this;
-        Column(modifier=Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             // LineItem adds in an annoying 16dp between heading and first item that we don't want
-            Spacer(modifier=Modifier.height(16.dp))
-            Row(modifier=Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text="Permissions",
-                    style=MaterialTheme.typography.displayMedium,
-                    textAlign= TextAlign.Center,
-                    modifier= Modifier
+                    text = "Permissions",
+                    style = MaterialTheme.typography.displayMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal=16.dp, vertical=0.dp),
+                        .padding(horizontal = 16.dp, vertical = 0.dp),
                 )
             }
-            LazyColumn(modifier= Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
                 val createRow: (label: String, permission: String) -> Unit = { label, permission ->
-                    val isEnabled = ActivityCompat.checkSelfPermission(self, permission) == PackageManager.PERMISSION_GRANTED;
+                    val isEnabled = ActivityCompat.checkSelfPermission(
+                        self,
+                        permission
+                    ) == PackageManager.PERMISSION_GRANTED;
                     item {
                         ListItem(
-                            headlineContent = { Text(text=label) },
-                            supportingContent = { Text(text=permission.split('.').last()) },
+                            headlineContent = { Text(text = label) },
+                            supportingContent = { Text(text = permission.split('.').last()) },
                             trailingContent = {
                                 Switch(
-                                    checked=isEnabled,
-                                    onCheckedChange={
+                                    checked = isEnabled,
+                                    onCheckedChange = {
                                         if (it) {
-                                            ActivityCompat.requestPermissions(self, arrayOf(permission), 1)
+                                            ActivityCompat.requestPermissions(
+                                                self,
+                                                arrayOf(permission),
+                                                1
+                                            )
                                         }
                                     },
                                     thumbContent = if (isEnabled) {
@@ -741,14 +807,20 @@ class MainActivity : ComponentActivity() {
                 }
                 createRow("Start foreground service", Manifest.permission.FOREGROUND_SERVICE);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    createRow("Allow foreground service to get location", Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+                    createRow(
+                        "Allow foreground service to get location",
+                        Manifest.permission.FOREGROUND_SERVICE_LOCATION
+                    )
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     createRow("Post notifications", Manifest.permission.POST_NOTIFICATIONS);
                 }
                 createRow("Set alarm", Manifest.permission.SET_ALARM);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    createRow("Read location in background", Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+                    createRow(
+                        "Read location in background",
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    );
                 }
                 createRow("Allow coarse location", Manifest.permission.ACCESS_COARSE_LOCATION);
                 createRow("Allow precise location", Manifest.permission.ACCESS_FINE_LOCATION);
@@ -759,23 +831,8 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun renderSettings() {
+    private fun RenderSettings() {
         val settingsComposable = SettingsComposable.getInstance();
-        settingsComposable.render(this.settings, onChange={ this.renderView() })
+        settingsComposable.Render(this.settings, onChange = { this.renderView() })
     }
-}
-
-
-@Composable
-private fun RowScope.TableCell(
-    text: String,
-    weight: Float
-) {
-    Text(
-        text=text,
-        Modifier
-            .border(1.dp, Color.Black)
-            .weight(weight)
-            .padding(8.dp)
-    )
 }

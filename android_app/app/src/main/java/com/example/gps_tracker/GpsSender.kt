@@ -2,13 +2,10 @@ package com.example.gps_tracker
 
 import android.Manifest
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.android.volley.NetworkResponse
@@ -26,11 +23,8 @@ import java.nio.ByteOrder
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.LinkedList
-import java.util.Vector
 import kotlin.experimental.or
-import kotlin.properties.Delegates
 
 private const val TAG: String = "gps_sender";
 
@@ -38,6 +32,7 @@ class GpsSenderContext(context: Context) {
     val parentContext: Context;
     val fusedLocationClient: FusedLocationProviderClient;
     val requestQueue: RequestQueue;
+
     init {
         parentContext = context;
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context);
@@ -69,11 +64,19 @@ class GpsData {
     var locationExtras: Bundle? = null;
     var isSent: Boolean = false;
 
-    val localDateTime: LocalDateTime get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.unixTimeMillis), ZoneId.systemDefault());
+    val localDateTime: LocalDateTime
+        get() = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(this.unixTimeMillis),
+            ZoneId.systemDefault()
+        );
 
     fun encodeIntoBuffer(buffer: ByteBuffer) {
         buffer.putLong(this.unixTimeMillis);
-        val batteryChargingFlag: Byte = if (this.batteryCharging) { 0x80.toByte() } else { 0x00.toByte() };
+        val batteryChargingFlag: Byte = if (this.batteryCharging) {
+            0x80.toByte()
+        } else {
+            0x00.toByte()
+        };
         val batteryPercentage = minOf(maxOf(this.batteryPercentage, 0), 100);
         buffer.put(batteryPercentage.toByte().or(batteryChargingFlag));
         buffer.putDouble(this.latitude);
@@ -81,18 +84,18 @@ class GpsData {
 
         // This has 9 optional fields, encode this into a u16 bitflag
         var flags: Short = 0;
-        this.accuracy?.let              { flags = flags or (1 shl 0).toShort() }
-        this.altitude?.let              { flags = flags or (1 shl 1).toShort() }
-        this.altitudeAccuracy?.let      { flags = flags or (1 shl 2).toShort() }
-        this.mslAltitude?.let           { flags = flags or (1 shl 3).toShort() }
-        this.mslAltitudeAccuracy?.let   { flags = flags or (1 shl 4).toShort() }
-        this.speed?.let                 { flags = flags or (1 shl 5).toShort() }
-        this.speedAccuracy?.let         { flags = flags or (1 shl 6).toShort() }
-        this.bearing?.let               { flags = flags or (1 shl 7).toShort() }
-        this.bearingAccuracy?.let       { flags = flags or (1 shl 8).toShort() }
+        this.accuracy?.let { flags = flags or (1 shl 0).toShort() }
+        this.altitude?.let { flags = flags or (1 shl 1).toShort() }
+        this.altitudeAccuracy?.let { flags = flags or (1 shl 2).toShort() }
+        this.mslAltitude?.let { flags = flags or (1 shl 3).toShort() }
+        this.mslAltitudeAccuracy?.let { flags = flags or (1 shl 4).toShort() }
+        this.speed?.let { flags = flags or (1 shl 5).toShort() }
+        this.speedAccuracy?.let { flags = flags or (1 shl 6).toShort() }
+        this.bearing?.let { flags = flags or (1 shl 7).toShort() }
+        this.bearingAccuracy?.let { flags = flags or (1 shl 8).toShort() }
         buffer.putShort(flags);
         this.accuracy?.let { buffer.putFloat(it) }
-        this.altitude?.let { buffer.putFloat(it.toFloat()) }
+        this.altitude?.let { buffer.putFloat(it) }
         this.altitudeAccuracy?.let { buffer.putFloat(it) }
         this.mslAltitude?.let { buffer.putFloat(it.toFloat()) }
         this.mslAltitudeAccuracy?.let { buffer.putFloat(it) }
@@ -110,15 +113,15 @@ class GpsData {
         // longitude
         // extensionFlags
         size += (8U + 1U + 8U + 8U + 2U);
-        this.accuracy?.let              { size += 4U; }
-        this.altitude?.let              { size += 4U; }
-        this.altitudeAccuracy?.let      { size += 4U; }
-        this.mslAltitude?.let           { size += 4U; }
-        this.mslAltitudeAccuracy?.let   { size += 4U; }
-        this.speed?.let                 { size += 4U; }
-        this.speedAccuracy?.let         { size += 4U; }
-        this.bearing?.let               { size += 4U; }
-        this.bearingAccuracy?.let       { size += 4U; }
+        this.accuracy?.let { size += 4U; }
+        this.altitude?.let { size += 4U; }
+        this.altitudeAccuracy?.let { size += 4U; }
+        this.mslAltitude?.let { size += 4U; }
+        this.mslAltitudeAccuracy?.let { size += 4U; }
+        this.speed?.let { size += 4U; }
+        this.speedAccuracy?.let { size += 4U; }
+        this.bearing?.let { size += 4U; }
+        this.bearingAccuracy?.let { size += 4U; }
         return size;
     }
 }
@@ -131,9 +134,15 @@ class ServerResponse {
     var totalSent: Int? = null;
 
     val startLocalDateTime: LocalDateTime
-        get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.startUnixTimeMillis), ZoneId.systemDefault());
+        get() = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(this.startUnixTimeMillis),
+            ZoneId.systemDefault()
+        );
     val endLocalDateTime: LocalDateTime
-        get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.endUnixTimeMillis), ZoneId.systemDefault());
+        get() = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(this.endUnixTimeMillis),
+            ZoneId.systemDefault()
+        );
 }
 
 class GpsSenderStatistics {
@@ -147,12 +156,17 @@ class GpsSenderStatistics {
 }
 
 sealed class TimeLineEvent {
-    data class MeasurementFail(val unixTimeMillis: Long): TimeLineEvent() {
-        val localDateTime: LocalDateTime get() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this.unixTimeMillis), ZoneId.systemDefault());
+    data class MeasurementFail(val unixTimeMillis: Long) : TimeLineEvent() {
+        val localDateTime: LocalDateTime
+            get() = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(this.unixTimeMillis),
+                ZoneId.systemDefault()
+            );
     }
-    data class MeasurementSuccess(val gpsData: GpsData): TimeLineEvent()
-    data class TransmissionFail(val serverResponse: ServerResponse): TimeLineEvent()
-    data class TransmissionSuccess(val serverResponse: ServerResponse): TimeLineEvent()
+
+    data class MeasurementSuccess(val gpsData: GpsData) : TimeLineEvent()
+    data class TransmissionFail(val serverResponse: ServerResponse) : TimeLineEvent()
+    data class TransmissionSuccess(val serverResponse: ServerResponse) : TimeLineEvent()
 }
 
 class GpsSender private constructor() {
@@ -164,10 +178,12 @@ class GpsSender private constructor() {
     var lastServerResponse: ServerResponse? = null;
 
     companion object {
-        @Volatile private var instance: GpsSender? = null // Volatile modifier is necessary
-        fun getInstance() = instance ?: synchronized(this) { // synchronized to avoid concurrency problem
-            instance ?: GpsSender().also { instance = it }
-        }
+        @Volatile
+        private var instance: GpsSender? = null // Volatile modifier is necessary
+        fun getInstance() =
+            instance ?: synchronized(this) { // synchronized to avoid concurrency problem
+                instance ?: GpsSender().also { instance = it }
+            }
     }
 
     fun listen(listener: GpsSenderListener) {
@@ -193,58 +209,112 @@ class GpsSender private constructor() {
     }
 
     fun refreshLocation(context: GpsSenderContext) {
-        if (ActivityCompat.checkSelfPermission(context.parentContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                context.parentContext,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             Log.e(TAG, "Missing ACCESS_FINE_LOCATION permission when refreshing location");
             return;
         }
-        if (ActivityCompat.checkSelfPermission(context.parentContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                context.parentContext,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             Log.e(TAG, "Missing ACCESS_COARSE_LOCATION permission when refreshing location");
             return;
         }
         this.stats.measureAttempts++;
-        context.fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener {
-            it?.let { location ->
-                val batteryManager = context.parentContext.getSystemService(Context.BATTERY_SERVICE) as BatteryManager;
-                val data = GpsData();
-                data.unixTimeMillis = location.time;
-                data.batteryPercentage = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-                data.batteryCharging = batteryManager.isCharging;
-                data.latitude = location.latitude;
-                data.longitude = location.longitude;
-                data.accuracy = if (location.hasAccuracy()) { location.accuracy } else { null };
-                data.altitude = if (location.hasAltitude()) { location.altitude.toFloat() } else { null };
-                data.altitudeAccuracy = if (location.hasVerticalAccuracy()) { location.verticalAccuracyMeters } else { null };
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    try {
-                        data.mslAltitude = if (location.hasMslAltitude()) { location.mslAltitudeMeters } else { null };
-                        data.mslAltitudeAccuracy = if (location.hasMslAltitudeAccuracy()) { location.mslAltitudeAccuracyMeters } else { null };
-                    } catch (ex: Exception) {
-                        Log.e(TAG, "Failed to get mean sea level information: $ex");
+        context.fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            .addOnSuccessListener {
+                it?.let { location ->
+                    val batteryManager =
+                        context.parentContext.getSystemService(Context.BATTERY_SERVICE) as BatteryManager;
+                    val data = GpsData();
+                    data.unixTimeMillis = location.time;
+                    data.batteryPercentage =
+                        batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+                    data.batteryCharging = batteryManager.isCharging;
+                    data.latitude = location.latitude;
+                    data.longitude = location.longitude;
+                    data.accuracy = if (location.hasAccuracy()) {
+                        location.accuracy
+                    } else {
+                        null
+                    };
+                    data.altitude = if (location.hasAltitude()) {
+                        location.altitude.toFloat()
+                    } else {
+                        null
+                    };
+                    data.altitudeAccuracy = if (location.hasVerticalAccuracy()) {
+                        location.verticalAccuracyMeters
+                    } else {
+                        null
+                    };
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        try {
+                            data.mslAltitude = if (location.hasMslAltitude()) {
+                                location.mslAltitudeMeters
+                            } else {
+                                null
+                            };
+                            data.mslAltitudeAccuracy = if (location.hasMslAltitudeAccuracy()) {
+                                location.mslAltitudeAccuracyMeters
+                            } else {
+                                null
+                            };
+                        } catch (ex: Exception) {
+                            Log.e(TAG, "Failed to get mean sea level information: $ex");
+                        }
                     }
+                    data.speed = if (location.hasSpeed()) {
+                        location.speed
+                    } else {
+                        null
+                    };
+                    data.speedAccuracy = if (location.hasSpeedAccuracy()) {
+                        location.speedAccuracyMetersPerSecond
+                    } else {
+                        null
+                    };
+                    data.bearing = if (location.hasBearing()) {
+                        location.bearing
+                    } else {
+                        null
+                    };
+                    data.bearingAccuracy = if (location.hasBearingAccuracy()) {
+                        location.bearingAccuracyDegrees
+                    } else {
+                        null
+                    };
+                    data.locationExtras = location.extras;
+                    this.lastGpsData = data;
+                    pushTimelineEvent(context, TimeLineEvent.MeasurementSuccess(data));
+                    synchronized(this.gpsDataQueue) {
+                        this.gpsDataQueue.addFirst(data);
+                    }
+                    this.stats.measureSuccess++;
+                    this.postGPS(context);
+                } ?: {
+                    this.lastGpsData = null;
+                    pushTimelineEvent(
+                        context,
+                        TimeLineEvent.MeasurementFail(System.currentTimeMillis())
+                    )
+                    this.stats.measureFail++;
                 }
-                data.speed = if (location.hasSpeed()) { location.speed } else { null };
-                data.speedAccuracy = if (location.hasSpeedAccuracy()) { location.speedAccuracyMetersPerSecond } else { null };
-                data.bearing = if (location.hasBearing()) { location.bearing } else { null };
-                data.bearingAccuracy = if (location.hasBearingAccuracy()) { location.bearingAccuracyDegrees } else { null };
-                data.locationExtras = location.extras;
-                this.lastGpsData = data;
-                pushTimelineEvent(context, TimeLineEvent.MeasurementSuccess(data));
-                synchronized(this.gpsDataQueue) {
-                    this.gpsDataQueue.addFirst(data);
-                }
-                this.stats.measureSuccess++;
-                this.postGPS(context);
-            } ?: {
-                this.lastGpsData = null;
-                pushTimelineEvent(context, TimeLineEvent.MeasurementFail(System.currentTimeMillis()))
-                this.stats.measureFail++;
+                listeners.forEach { listener -> listener.onGpsData(); }
             }
-            listeners.forEach { listener -> listener.onGpsData(); }
-        }
     }
 
     fun postGPS(context: GpsSenderContext) {
-        if (ActivityCompat.checkSelfPermission(context.parentContext, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                context.parentContext,
+                Manifest.permission.INTERNET
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             Log.e(TAG, "Missing INTERNET permission when posting GPS location");
             return;
         }
@@ -346,13 +416,15 @@ private class BinaryRequest(
     private val statusListener: Response.Listener<Int>,
     successListener: Response.Listener<String>,
     errorListener: Response.ErrorListener
-): StringRequest(method, url, successListener, errorListener) {
+) : StringRequest(method, url, successListener, errorListener) {
     override fun getBody(): ByteArray {
         return requestBody;
     }
+
     override fun getBodyContentType(): String {
         return "application/octet-stream";
     }
+
     override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
         statusListener.onResponse(response.statusCode);
         return super.parseNetworkResponse(response);
@@ -365,13 +437,15 @@ private class JsonRequest(
     private val statusListener: Response.Listener<Int>,
     successListener: Response.Listener<String>,
     errorListener: Response.ErrorListener
-): StringRequest(method, url, successListener, errorListener) {
+) : StringRequest(method, url, successListener, errorListener) {
     override fun getBody(): ByteArray {
         return requestBody.toString(2).encodeToByteArray();
     }
+
     override fun getBodyContentType(): String {
         return "application/json";
     }
+
     override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
         statusListener.onResponse(response.statusCode);
         return super.parseNetworkResponse(response);
