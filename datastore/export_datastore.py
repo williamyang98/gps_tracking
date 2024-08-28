@@ -3,30 +3,58 @@ from collections import namedtuple
 import argparse
 import csv
 
-GPS_Data = namedtuple("GPS_Data", ["user_id", "unix_time", "latitude", "longitude", "altitude"])
+GPS_Data = namedtuple("GPS_Data", [
+    "user_id",
+    "unix_time_millis",
+    "battery_percentage",
+    "battery_charging",
+    "latitude", "longitude", "accuracy",
+    "altitude", "altitude_accuracy",
+    "msl_altitude", "msl_altitude_accuracy",
+    "speed", "speed_accuracy",
+    "bearing", "bearing_accuracy",
+])
+
+gps_data_field_types = [
+    int, # user_id
+    int, # unix_time_millis
+    int, # battery_percentage
+    bool, # battery_charging
+    float, float, float, # latitude, longitude, accuracy
+    float, float, # altitude, altitude_accuracy
+    float, float, # msl_altitude, msl_altitude_accuracy
+    float, float, # speed, speed_accuracy
+    float, float, # bearing, bearing_accuracy
+]
 
 def datastore_to_gps_data(entry):
-    user_id = int(entry["user_id"])
-    unix_time = int(entry["unix_time"])
-    latitude = float(entry["latitude"])
-    longitude = float(entry["longitude"])
-    altitude = float(entry["altitude"])
-    return GPS_Data(user_id, unix_time, latitude, longitude, altitude)
+    field_data = []
+    for field, field_type in zip(GPS_Data._fields, gps_data_field_types):
+        data = entry.get(field, None)
+        if data != None:
+            data = field_type(data)
+        field_data.append(data)
+    return GPS_Data(*field_data)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="gps_data.csv", type=str)
+    parser.add_argument("--output", default="./data/gps_data.csv", type=str)
     args = parser.parse_args()
 
     client = datastore.Client("gps-tracking-433211")
     query = client.query(kind="gps")
+    query.order = ["-unix_time_millis"]
     results = query.fetch()
-    gps_data = list(map(lambda x: datastore_to_gps_data(x), results))
+    gps_data = map(lambda x: datastore_to_gps_data(x), results)
 
     with open(args.output, "w+", newline="") as fp:
         writer = csv.writer(fp)
         writer.writerow(GPS_Data._fields)
-        writer.writerows(gps_data)
+        total_rows = 0
+        for row in gps_data:
+            writer.writerow(row)
+            total_rows += 1
+        print(f"Wrote {total_rows} rows")
 
 if __name__ == "__main__":
     main()
