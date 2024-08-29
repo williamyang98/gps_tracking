@@ -75,12 +75,12 @@ def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
     if download_name != None and len(download_name) > MAX_DOWNLOAD_NAME:
         return f"Download name must be less than {MAX_DOWNLOAD_NAME} characters", HTTPStatus.BAD_REQUEST
 
-    max_rows = req.args.get("max_rows", None)
-    if max_rows != None:
-        try:
-            max_rows = int(max_rows)
-        except:
-            return "Max rows must be an integer", HTTPStatus.BAD_REQUEST
+    DEFAULT_MAX_ROWS = 25
+    max_rows = req.args.get("max_rows", DEFAULT_MAX_ROWS)
+    try:
+        max_rows = int(max_rows)
+    except:
+        return "Max rows must be an integer", HTTPStatus.BAD_REQUEST
 
     client = datastore.Client(os.environ["PROJECT_ID"])
     query = client.query(kind="gps")
