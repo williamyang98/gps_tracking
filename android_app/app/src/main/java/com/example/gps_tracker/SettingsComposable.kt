@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -63,36 +64,43 @@ class SettingsComposable private constructor() {
             EditInteger(
                 "User ID",
                 Icons.Filled.Face,
-                { -> settings.userId },
+                { settings.userId },
                 { v -> settings.userId = v },
                 onChange
             );
             EditString(
                 "User Name",
                 Icons.Filled.AccountBox,
-                { -> settings.userName },
+                { settings.userName },
                 { v -> settings.userName = v },
                 onChange
             );
             EditInteger(
                 "Interval (minutes)",
                 Icons.Filled.DateRange,
-                { -> settings.interval },
+                { settings.interval },
                 { v -> settings.interval = v },
                 onChange
             )
             EditInteger(
                 "Timeline Length",
                 Icons.Filled.List,
-                { -> settings.timelineLength },
+                { settings.timelineLength },
                 { v -> settings.timelineLength = v },
                 onChange
             )
+            EditString(
+                "Server URL",
+                Icons.Filled.Home,
+                { settings.serverUrl },
+                { v -> settings.serverUrl = v },
+                onChange
+            );
             EditBoolean(
                 "Autostart",
                 "Start background service on open",
                 Icons.Filled.PlayArrow,
-                { -> settings.autostart },
+                { settings.autostart },
                 { v -> settings.autostart = v },
                 onChange,
             )

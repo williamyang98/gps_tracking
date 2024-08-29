@@ -1,4 +1,3 @@
 <resources>
     <string name="app_name">GPS Tracker</string>
-    <string name="server_url">https://australia-southeast1-gps-tracking-433211.cloudfunctions.net</string>
 </resources>

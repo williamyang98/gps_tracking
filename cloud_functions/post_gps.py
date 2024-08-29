@@ -51,7 +51,6 @@ def encode_gps_data(d: GPS_Data) -> bytearray:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local", action="store_true")
     parser.add_argument("--user-id", default=3, type=int)
     parser.add_argument("--battery-percentage", default=69, type=int)
     parser.add_argument("--battery-charging", action="store_true", default=False)
@@ -66,13 +65,8 @@ def main():
     parser.add_argument("--speed-accuracy", default=None, type=float)
     parser.add_argument("--bearing", default=None, type=float)
     parser.add_argument("--bearing-accuracy", default=None, type=float)
-    parser.add_argument("--url", default="https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/post-gps-extended", type=str)
+    parser.add_argument("--url", default="http://localhost:5000", type=str)
     args = parser.parse_args()
-
-    if args.local:
-        url = "http://localhost:8080"
-    else:
-        url = args.url
 
     unix_time_millis = int(time.time() * 1000)
     gps_data = GPS_Data(
@@ -86,7 +80,7 @@ def main():
     )
     print(gps_data)
     body = encode_gps_data(gps_data)
-    post_url = f"{url}?user_id={args.user_id}"
+    post_url = f"{url}/post_gps?user_id={args.user_id}"
     res = requests.post(post_url, data=body)
     print(f"status_code: {res.status_code}")
     print(f"body: {res.text}")

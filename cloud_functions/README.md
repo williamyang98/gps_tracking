@@ -5,14 +5,12 @@
 ## Commands
 | Description | Command |
 | --- | --- |
-| Deploy function to gcloud | ```./deploy_function.sh <folder_name> <id>``` |
-| Test function locally | ```./test_function.sh <folder_name>``` |
-| Submit gps sample to server | ```python ./post_gps.py --local``` |
-| Register username | ```python ./post_user_name.py <id> <name> --local``` |
-| Serve track visualiser | ```python -m http.server -d ./visualise_tracks/static/``` |
+| Deploy function/s to gcloud | ```./deploy_function.sh [folder_name]``` |
+| Test functions locally | ```python ./test_local.py``` |
+| Submit gps sample to server | ```python ./post_gps.py``` |
+| Register username | ```python ./post_user_name.py <id> <name>``` |
 
-## Urls
-- [get_gps](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-gps)
-- [get_user_names](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-user-names)
-- [get_gps (attachment)](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/get-gps?download=gps_data.csv&max_rows=128)
-- [visualise_tracks](https://australia-southeast1-gps-tracking-433211.cloudfunctions.net/visualise_tracks/)
+## Performining initial setup
+1. Enable cloud functions api in dashboard.
+    - [Cloud functions](https://console.cloud.google.com/functions/list)
+2. Deploy all functions to gcloud: ```./deploy_function.sh```.

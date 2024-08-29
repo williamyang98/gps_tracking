@@ -331,9 +331,8 @@ class GpsSender private constructor() {
             // keep track of which queued data points to remove after success
             val lastDataUnixTime: Long = this.gpsDataQueue.maxOf { it.unixTimeMillis };
             // attempt post
-            val baseUrl = context.parentContext.resources.getString(R.string.server_url);
-            val url = "$baseUrl/post-gps";
-
+            val baseUrl = settings.serverUrl;
+            val url = "$baseUrl/post_gps";
             val serverResponse = ServerResponse();
             serverResponse.startUnixTimeMillis = System.currentTimeMillis();
             this.stats.postAttempts++;
@@ -386,8 +385,8 @@ class GpsSender private constructor() {
         val settings = Settings(context.parentContext);
         val userId = settings.userId;
         val userName = settings.userName;
-        val baseUrl = context.parentContext.resources.getString(R.string.server_url);
-        val url = "$baseUrl/register-user-name";
+        val baseUrl = settings.serverUrl;
+        val url = "$baseUrl/register_user_name";
         val body = JSONObject();
         body.put("user_id", userId.toString());
         body.put("user_name", userName);

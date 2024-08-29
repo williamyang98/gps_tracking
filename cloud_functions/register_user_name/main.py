@@ -1,8 +1,9 @@
 from collections import namedtuple
+from google.cloud import datastore
 from http import HTTPStatus
 import flask
 import functions_framework
-from google.cloud import datastore
+import os
 
 @functions_framework.http
 def register_user_name(req: flask.Request) -> flask.typing.ResponseReturnValue:
@@ -22,7 +23,7 @@ def register_user_name(req: flask.Request) -> flask.typing.ResponseReturnValue:
     except Exception as ex:
         return f"User id must be an integer: {ex}", HTTPStatus.BAD_REQUEST
 
-    client = datastore.Client("gps-tracking-433211")
+    client = datastore.Client(os.environ["PROJECT_ID"])
     kind = "username"
     query = client.query(kind=kind)
     query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))

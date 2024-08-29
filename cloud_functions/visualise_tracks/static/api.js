@@ -1,5 +1,3 @@
-const GPS_API_URL = "https://australia-southeast1-gps-tracking-433211.cloudfunctions.net"
-
 const parse_csv = (data) => {
   return data
     .split("\n")
@@ -70,10 +68,11 @@ export class User {
 
 export class GpsApi {
   static get_gps = async ({ user_id, max_rows=128 }) => {
+    const GPS_API_URL = window.location.origin;
     let params = [];
     params.push(`user_id=${encodeURIComponent(user_id)}`);
     params.push(`max_rows=${encodeURIComponent(max_rows)}`);
-    let base_url = `${GPS_API_URL}/get-gps`;
+    let base_url = `${GPS_API_URL}/get_gps`;
     let url = `${base_url}?${params.join("&")}`;
     let response = await fetch(url);
     let body = await response.text();
@@ -134,7 +133,8 @@ export class GpsApi {
   }
 
   static get_users = async () => {
-    let url = `${GPS_API_URL}/get-user-names`;
+    const GPS_API_URL = window.location.origin;
+    let url = `${GPS_API_URL}/get_user_names`;
     let response = await fetch(url);
     let body = await response.text();
     let csv_data = parse_csv(body);

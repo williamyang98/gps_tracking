@@ -1,5 +1,6 @@
 from google.cloud import datastore
 import argparse
+import os
 import time
 
 def main():
@@ -8,7 +9,7 @@ def main():
     parser.add_argument("--older-than-days", default=None, type=int, help="Delete entries old than this")
     args = parser.parse_args()
 
-    client = datastore.Client("gps-tracking-433211")
+    client = datastore.Client(os.environ["PROJECT_ID"])
     query = client.query(kind="gps")
     if args.user_id != None:
         print(f"Filtering for user_id={args.user_id}")

@@ -1,7 +1,8 @@
-from google.cloud import datastore
 from collections import namedtuple
+from google.cloud import datastore
 import argparse
 import csv
+import os
 
 GPS_Data = namedtuple("GPS_Data", [
     "user_id",
@@ -41,7 +42,7 @@ def main():
     parser.add_argument("--output", default="./data/gps_data.csv", type=str)
     args = parser.parse_args()
 
-    client = datastore.Client("gps-tracking-433211")
+    client = datastore.Client(os.environ["PROJECT_ID"])
     query = client.query(kind="gps")
     query.order = ["-unix_time_millis"]
     results = query.fetch()

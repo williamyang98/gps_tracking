@@ -11,6 +11,7 @@ private class Keys {
         const val AUTOSTART: String = "autostart";
         const val USER_NAME: String = "user_name";
         const val TIMELINE_LENGTH: String = "timeline_length";
+        const val SERVER_URL: String = "server_url";
     }
 }
 
@@ -77,5 +78,16 @@ class Settings(context: Context) {
         }
         set(value) {
             prefs.edit().putInt(Keys.TIMELINE_LENGTH, value).apply();
+        }
+
+    var serverUrl: String
+        get() {
+            if (!prefs.contains(Keys.SERVER_URL)) {
+                prefs.edit().putString(Keys.SERVER_URL, "").apply();
+            }
+            return prefs.getString(Keys.SERVER_URL, "");
+        }
+        set(value) {
+            prefs.edit().putString(Keys.SERVER_URL, value).apply();
         }
 }

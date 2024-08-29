@@ -1,8 +1,9 @@
 from collections import namedtuple
+from google.cloud import datastore
 from http import HTTPStatus
 import flask
 import functions_framework
-from google.cloud import datastore
+import os
 import struct
 
 GPS_Data = namedtuple("GPS_Data", [
@@ -100,7 +101,7 @@ def post_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
     if len(all_errors) > 0:
         return { "type": "validate_gps_data",  "errors": all_errors }, HTTPStatus.UNPROCESSABLE_ENTITY
 
-    client = datastore.Client("gps-tracking-433211")
+    client = datastore.Client(os.environ["PROJECT_ID"])
     with client.transaction():
         key = client.key("gps")
         for gps_data in gps_data_list:
