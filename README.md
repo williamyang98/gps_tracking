@@ -19,13 +19,16 @@
 - [Datastore](https://console.cloud.google.com/datastore/databases/-default-/)
 
 # Plotting track with website
-## Using Google cloud
+1. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
+2. Copy the api key into the visualiser when it prompts for it.
+
+## Serving website from gcloud 
 1. Go to dashboard: [Cloud functions](https://console.cloud.google.com/functions/list)
 2. Get URL for ```/visualise_tracks/``` endpoint.
 
 ## Deploying website locally
 1. Start local test server: ```python ./cloud_functions/test_local.py```.
-2. Open visualiser: [Local visualiser](http://localhost:5000/visualise_tracks/)
+2. Open visualiser: [Local URL](http://localhost:5000/visualise_tracks/)
 
 ![Local visualiser](./docs/local_visualiser.png)
 

@@ -3,11 +3,10 @@
   <head>
     <title>GPS Plotter</title>
     <link rel="stylesheet" href="./index.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDw9QlrD4-O0i_uvlayNPQGeN-xoARtMMs"></script>
   </head>
   <body>
     <div class="d-flex flex-row" style="height: 100vh">
-      <div class="d-flex flex-col">
+      <div class="d-flex flex-col" style="padding: 0.25rem">
         <div class="d-flex flex-row">
           <b class="mr-auto">Users</b>
           <button id="user_list_refresh">Refresh</button>
@@ -23,6 +22,10 @@
           <div class="d-flex flex-row">
             <label class="mr-auto">Max rows</label>
             <input class="w-25" id="settings_max_rows" type="number" min="1" max="256" value="25"></input>
+          </div>
+          <div class="d-flex flex-row">
+            <label class="mr-auto">Api Key</label>
+            <input class="w-50" id="settings_api_key" type="text"></input>
           </div>
         </div>
         <details>
@@ -116,10 +119,32 @@
       </div>
     </div>
     <script type="module">
-      import { App } from "./index.js";
-      import { GpsApi } from "./api.js";
-      window.app = new App();
-      window.GpsApi = GpsApi;
+      import { App, GOOGLE_MAP_API_KEY_INDEX } from "./index.js";
+      // insert api key on startup
+      var api_key = localStorage.getItem(GOOGLE_MAP_API_KEY_INDEX);
+      while (api_key === null || api_key === undefined) {
+        api_key = prompt("Insert Google maps api key");
+        if (api_key !== null) {
+          localStorage.setItem(GOOGLE_MAP_API_KEY_INDEX, api_key);
+        }
+      }
+      // ask for api key if api failed to load
+      window.gm_authFailure = () => {
+        var api_key = localStorage.getItem(GOOGLE_MAP_API_KEY_INDEX);
+        api_key = prompt("Google maps api authentication failure\nRe-enter Google maps api key", api_key);
+        if (api_key !== null) {
+          localStorage.setItem(GOOGLE_MAP_API_KEY_INDEX, api_key);
+        }
+        window.location.reload();
+      }
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${api_key}`;
+      script.onerror = () => console.error('Failed to load Google Maps API');
+      script.addEventListener("load", () => {
+        console.log("Loaded Google maps api");
+        window.app = new App();
+      });
+      document.head.appendChild(script);
     </script>
   </body>
 </html>

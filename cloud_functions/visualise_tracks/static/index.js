@@ -32,6 +32,8 @@ const get_battery_symbol = (percentage, is_charging) => {
   }
 }
 
+export const GOOGLE_MAP_API_KEY_INDEX = "google_maps_api_key";
+
 export class App {
   constructor() {
     this.elems = {
@@ -48,6 +50,7 @@ export class App {
       "timeline_control": document.getElementById("timeline_control"),
       "settings": {
         "max_rows": document.getElementById("settings_max_rows"),
+        "api_key": document.getElementById("settings_api_key"),
         "zoom_level": document.getElementById("settings_zoom_level"),
         "stroke_hue": document.getElementById("settings_stroke_hue"),
         "stroke_weight": document.getElementById("settings_stroke_weight"),
@@ -87,6 +90,7 @@ export class App {
     this.table_rows = [];
     this.selected_marker_index = null;
     this.bind_controls();
+    this.persist_settings();
     this.load_users();
   }
 
@@ -100,6 +104,60 @@ export class App {
       return parts;
     }, {});
     return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+  }
+
+  persist_settings = () => {
+    let get_value = (key, default_value) => {
+      let value = localStorage.getItem(key);
+      return (value === null) ? default_value : value;
+    };
+    let set_value = (key, value) => {
+      localStorage.setItem(key, value);
+    };
+    let persist_number_input = (elem, key, default_value) => {
+      elem.value = Number(get_value(key, default_value));
+      elem.addEventListener("change", (ev) => {
+        let value = Number(ev.target.value);
+        if (value !== null && value !== undefined) {
+          set_value(key, value);
+        }
+      });
+    };
+    let persist_string_input = (elem, key, default_value) => {
+      elem.value = get_value(key, default_value);
+      elem.addEventListener("change", (ev) => {
+        let value = ev.target.value;
+        if (value !== null && value !== undefined) {
+          set_value(key, value);
+        }
+      });
+    };
+    let persist_checked_input = (elem, key, default_value) => {
+      let value = get_value(key, default_value);
+      elem.checked = (value === "true" || value === true);
+      elem.addEventListener("change", (ev) => {
+        let value = Boolean(ev.target.checked);
+        if (value !== null && value !== undefined) {
+          set_value(key, value);
+        }
+      });
+    };
+    let elems = this.elems.settings;
+    persist_number_input(elems.max_rows, "max_rows", 25);
+    persist_string_input(elems.api_key, GOOGLE_MAP_API_KEY_INDEX, "");
+    persist_number_input(elems.zoom_level, "zoom_level", 20);
+    persist_number_input(elems.stroke_hue, "stroke_hue", 0.7);
+    persist_number_input(elems.stroke_weight, "stroke_weight", 6);
+    persist_number_input(elems.stroke_weight_falloff, "stroke_weight_falloff", 0.25);
+    persist_number_input(elems.stroke_opacity, "stroke_opacity", 1);
+    persist_number_input(elems.stroke_opacity_falloff, "stroke_opacity", 0.75);
+    persist_number_input(elems.marker_size, "marker_size", 8);
+    persist_number_input(elems.marker_size_falloff, "marker_size_falloff", 0.25);
+    persist_number_input(elems.marker_opacity, "marker_opacity", 1);
+    persist_number_input(elems.marker_opacity_falloff, "marker_opacity_falloff", 0.75);
+    persist_number_input(elems.marker_outline, "marker_outline", 0.5);
+    persist_checked_input(elems.show_info_popup, "show_info_popup", true);
+    persist_checked_input(elems.show_info_close, "show_info_close", false);
   }
 
   bind_controls = () => {

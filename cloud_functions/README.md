@@ -11,6 +11,5 @@
 | Register username | ```python ./post_user_name.py <id> <name>``` |
 
 ## Performining initial setup
-1. Enable cloud functions api in dashboard.
-    - [Cloud functions](https://console.cloud.google.com/functions/list)
+1. Enable cloud functions api in dashboard: [Cloud functions](https://console.cloud.google.com/functions/list).
 2. Deploy all functions to gcloud: ```./deploy_function.sh```.
