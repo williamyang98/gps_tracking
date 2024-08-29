@@ -416,7 +416,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     headlineContent = {
                                         Text(
-                                            text = ev.localDateTime.format(
+                                            text = ev.startLocalDateTime.format(
                                                 FORMAT_DATETIME
                                             )
                                         )
@@ -469,7 +469,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     },
                                     supportingContent = {
-                                        Text(text = "${ev.statusCode} ${ev.responseBody}")
+                                        Text(text = "${ev.statusCode}, ${ev.totalSent}")
                                     },
                                     trailingContent = {
                                         Icon(
@@ -558,7 +558,14 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
-                                pushRow("Time", ev.localDateTime.format(FORMAT_DATETIME))
+                                pushRow(
+                                    "Measure Time",
+                                    ev.startLocalDateTime.format(FORMAT_DATETIME)
+                                )
+                                pushRow(
+                                    "Submit Time",
+                                    ev.endLocalDateTime?.format(FORMAT_DATETIME) ?: "?"
+                                );
                                 val batteryCharging = if (ev.batteryCharging) {
                                     "Charging"
                                 } else {
@@ -584,7 +591,6 @@ class MainActivity : ComponentActivity() {
                                     "Bearing",
                                     "${ev.bearing ?: "?"} ± ${ev.bearingAccuracy ?: "?"} °"
                                 )
-                                pushRow("Is Submitted", "${ev.isSent}")
                             }
                         }
 
@@ -692,7 +698,14 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
-                pushRow("Time", "${gpsSender.lastGpsData?.localDateTime?.format(FORMAT_DATETIME)}")
+                pushRow(
+                    "Measure Time",
+                    "${gpsSender.lastGpsData?.startLocalDateTime?.format(FORMAT_DATETIME)}"
+                )
+                pushRow(
+                    "Submit Time",
+                    "${gpsSender.lastGpsData?.endLocalDateTime?.format(FORMAT_DATETIME)}"
+                )
                 pushRow("Latitude", "${gpsSender.lastGpsData?.latitude}")
                 pushRow("Longitude", "${gpsSender.lastGpsData?.longitude}")
                 item { HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp)) }

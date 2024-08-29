@@ -47,7 +47,8 @@ interface GpsSenderListener {
 }
 
 class GpsData {
-    var unixTimeMillis: Long = 0;
+    var startUnixTimeMillis: Long = 0;
+    var endUnixTimeMillis: Long? = null;
     var batteryPercentage: Int = 0;
     var batteryCharging: Boolean = false;
     var latitude: Double = 0.0;
@@ -62,16 +63,25 @@ class GpsData {
     var bearing: Float? = null;
     var bearingAccuracy: Float? = null;
     var locationExtras: Bundle? = null;
-    var isSent: Boolean = false;
 
-    val localDateTime: LocalDateTime
+    val startLocalDateTime: LocalDateTime
         get() = LocalDateTime.ofInstant(
-            Instant.ofEpochMilli(this.unixTimeMillis),
+            Instant.ofEpochMilli(this.startUnixTimeMillis),
             ZoneId.systemDefault()
         );
+    val endLocalDateTime: LocalDateTime?
+        get() = this.endUnixTimeMillis?.let {
+            return LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(it),
+                ZoneId.systemDefault()
+            );
+        }
+
+    val isSent: Boolean
+        get() = (this.endUnixTimeMillis != null)
 
     fun encodeIntoBuffer(buffer: ByteBuffer) {
-        buffer.putLong(this.unixTimeMillis);
+        buffer.putLong(this.startUnixTimeMillis);
         val batteryChargingFlag: Byte = if (this.batteryCharging) {
             0x80.toByte()
         } else {
@@ -232,7 +242,7 @@ class GpsSender private constructor() {
                     val batteryManager =
                         context.parentContext.getSystemService(Context.BATTERY_SERVICE) as BatteryManager;
                     val data = GpsData();
-                    data.unixTimeMillis = location.time;
+                    data.startUnixTimeMillis = location.time;
                     data.batteryPercentage =
                         batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
                     data.batteryCharging = batteryManager.isCharging;
@@ -329,7 +339,7 @@ class GpsSender private constructor() {
             buffer.order(ByteOrder.LITTLE_ENDIAN);
             this.gpsDataQueue.forEach { it.encodeIntoBuffer(buffer); }
             // keep track of which queued data points to remove after success
-            val lastDataUnixTime: Long = this.gpsDataQueue.maxOf { it.unixTimeMillis };
+            val lastDataUnixTime: Long = this.gpsDataQueue.maxOf { it.startUnixTimeMillis };
             // attempt post
             val baseUrl = settings.serverUrl;
             val url = "$baseUrl/post_gps";
@@ -344,15 +354,17 @@ class GpsSender private constructor() {
                 },
                 { response ->
                     serverResponse.responseBody = response;
-                    serverResponse.endUnixTimeMillis = System.currentTimeMillis();
+                    val sentUnixTimeMillis = System.currentTimeMillis();
+                    serverResponse.endUnixTimeMillis = sentUnixTimeMillis;
                     synchronized(this.gpsDataQueue) {
                         var totalSent = 0;
-                        this.gpsDataQueue.filter { it.unixTimeMillis <= lastDataUnixTime }.forEach {
-                            it.isSent = true;
-                            totalSent++;
-                        }
+                        this.gpsDataQueue.filter { it.startUnixTimeMillis <= lastDataUnixTime }
+                            .forEach {
+                                it.endUnixTimeMillis = sentUnixTimeMillis;
+                                totalSent++;
+                            }
                         this.stats.postDataPoints += totalSent;
-                        this.gpsDataQueue.removeIf { it.unixTimeMillis <= lastDataUnixTime }
+                        this.gpsDataQueue.removeIf { it.startUnixTimeMillis <= lastDataUnixTime }
                         serverResponse.totalSent = totalSent;
                     }
                     pushTimelineEvent(context, TimeLineEvent.TransmissionSuccess(serverResponse));
