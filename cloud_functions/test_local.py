@@ -86,7 +86,7 @@ def init_app(app):
     def post_gps(req):
         return post_gps_func(req)
 
-    @app.route("/register_user_name")
+    @app.route("/register_user_name", methods=["POST"])
     @provide_request
     def register_user_name(req):
         return register_user_name_func(req)

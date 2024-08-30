@@ -80,7 +80,7 @@ def main():
     )
     print(gps_data)
     body = encode_gps_data(gps_data)
-    post_url = f"{url}/post_gps?user_id={args.user_id}"
+    post_url = f"{args.url}/post_gps?user_id={args.user_id}"
     res = requests.post(post_url, data=body)
     print(f"status_code: {res.status_code}")
     print(f"body: {res.text}")

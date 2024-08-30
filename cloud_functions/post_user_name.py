@@ -10,7 +10,7 @@ def main():
     args = parser.parse_args()
 
     body = { "user_id": args.user_id, "user_name": args.user_name }
-    res = requests.post(f"{url}/register_user_name", json=body)
+    res = requests.post(f"{args.url}/register_user_name", json=body)
     print(f"status_code: {res.status_code}")
     print(f"body: {res.text}")
 
