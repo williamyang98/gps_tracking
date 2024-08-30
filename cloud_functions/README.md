@@ -5,7 +5,7 @@
 ## Commands
 | Description | Command |
 | --- | --- |
-| Deploy function/s to gcloud | ```./deploy_function.sh [folder_name]``` |
+| Deploy function/s to gcloud | ```python ./deploy_function.py``` |
 | Test functions locally | ```python ./test_local.py``` |
 | Submit gps sample to server | ```python ./post_gps.py``` |
 | Register username | ```python ./post_user_name.py <id> <name>``` |
