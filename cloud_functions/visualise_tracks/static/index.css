@@ -24,6 +24,12 @@ tr.selected {
   background-color: aqua;
 }
 
+.horizontal-spacer {
+  width: 100%;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
 /* Input label */
 .form-label {
   display: flex;
