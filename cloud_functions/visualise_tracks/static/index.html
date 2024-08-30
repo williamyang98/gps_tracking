@@ -9,7 +9,7 @@
       <div class="d-flex flex-col" style="padding: 0.25rem">
         <button id="login_button" disabled>Checking login</button>
         <div class="d-flex flex-row">
-          <b class="mr-auto">Users</b>
+          <b class="mr-auto" id="user_count">Users</b>
           <button id="user_list_refresh" disabled>Refresh</button>
         </div>
         <select name="users" id="user_list">
@@ -82,7 +82,7 @@
             </div>
           </div>
         </details>
-        <div><b style="white-space: nowrap">GPS Points</b></div>
+        <div><b style="white-space: nowrap" id="gps_count">GPS Points</b></div>
         <div class="d-flex flex-row">
           <label class="mr-auto">Show Info Popup</label>
           <input class="w-25" id="settings_show_info_popup" type="checkbox" checked></input>

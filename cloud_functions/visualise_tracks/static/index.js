@@ -47,8 +47,10 @@ export class App {
     this.elems = {
       "login_button": document.getElementById("login_button"),
       "map": document.getElementById("map"),
+      "user_count": document.getElementById("user_count"),
       "user_list": document.getElementById("user_list"),
       "user_list_refresh": document.getElementById("user_list_refresh"),
+      "gps_count": document.getElementById("gps_count"),
       "gps_points": document.getElementById("gps_points"),
       "gps_points_select_up": document.getElementById("gps_points_select_up"),
       "gps_points_select_down": document.getElementById("gps_points_select_down"),
@@ -295,6 +297,7 @@ export class App {
       return;
     }
     this.users = users;
+    this.elems.user_count.innerText = `Users (${users.length})`
     let option_elems = users.map(user => {
       let elem = document.createElement("option");
       elem.value = user.id;
@@ -341,6 +344,7 @@ export class App {
       return;
     }
     // create html table
+    this.elems.gps_count.innerText = `GPS Points (${gps_points.length})`;
     let elem = this.elems.gps_points;
     elem.replaceChildren();
     if (gps_points.length === 0) {
