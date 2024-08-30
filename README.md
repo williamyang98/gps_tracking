@@ -28,7 +28,7 @@
 
 ## Deploying website locally
 1. Start local test server: ```python ./cloud_functions/test_local.py```.
-2. Open visualiser: [Local URL](http://localhost:5000/visualise_tracks/)
+2. Open visualiser: [Local URL](http://localhost:5000/visualise_tracks/index.html)
 
 ![Local visualiser](./docs/local_visualiser.png)
 

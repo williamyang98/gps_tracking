@@ -67,14 +67,19 @@ export class User {
 }
 
 export class GpsApi {
-  static get_gps = async ({ user_id, max_rows=128 }) => {
+  static get_gps = async ({ user_id, id_token, max_rows=128 }) => {
     const GPS_API_URL = window.location.origin;
     let params = [];
     params.push(`user_id=${encodeURIComponent(user_id)}`);
     params.push(`max_rows=${encodeURIComponent(max_rows)}`);
     let base_url = `${GPS_API_URL}/get_gps`;
     let url = `${base_url}?${params.join("&")}`;
-    let response = await fetch(url);
+    let response = await fetch(url, {
+      headers: { "Authorization": `Bearer ${id_token}` },
+    });
+    if (!response.ok) {
+      throw response;
+    }
     let body = await response.text();
     let csv_data = parse_csv(body);
     let gps_points = convert_csv_to_objects(
@@ -132,10 +137,15 @@ export class GpsApi {
     return gps_points;
   }
 
-  static get_users = async () => {
+  static get_users = async (id_token) => {
     const GPS_API_URL = window.location.origin;
     let url = `${GPS_API_URL}/get_user_names`;
-    let response = await fetch(url);
+    let response = await fetch(url, {
+      headers: { "Authorization": `Bearer ${id_token}` },
+    });
+    if (!response.ok) {
+      throw response;
+    }
     let body = await response.text();
     let csv_data = parse_csv(body);
     let user_names = convert_csv_to_objects(
@@ -144,6 +154,37 @@ export class GpsApi {
       ([id, name]) => new User(id, name),
     );
     return user_names;
+  }
+
+  static get_id_token = async (auth_code) => {
+    const GPS_API_URL = window.location.origin;
+    const REDIRECT_URL = `${window.location.protocol}//${window.location.host}${window.location.pathname}`
+    let url = `${GPS_API_URL}/oauth2_id_token`;
+    let response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        auth_code: auth_code,
+        redirect_uri: REDIRECT_URL,
+      }),
+    });
+    if (!response.ok) {
+      throw response;
+    }
+    let data = await response.json();
+    let id_token = data.id_token;
+    return id_token;
+  }
+
+  static get_login_url = () => {
+    const GPS_API_URL = window.location.origin;
+    const REDIRECT_URL = `${window.location.protocol}//${window.location.host}${window.location.pathname}`
+    let query_params = new URLSearchParams({ redirect_uri: REDIRECT_URL });
+    let query_string = query_params.toString();
+    return `${GPS_API_URL}/oauth2_login?${query_string}`;
   }
 }
 

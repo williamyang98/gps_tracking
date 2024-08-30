@@ -7,6 +7,8 @@ deploy_function () {
         --region australia-southeast1 \
         --allow-unauthenticated \
         --update-env-vars PROJECT_ID=${PROJECT_ID} \
+        --update-env-vars OAUTH2_CLIENT_ID=${OAUTH2_CLIENT_ID} \
+        --update-env-vars OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET} \
         --runtime python310 \
         --gen2 \
         --memory 128Mi \
@@ -24,6 +26,8 @@ fi
 
 if [[ $# -eq 0 ]] ; then
     echo "Deploying all functions"
+    deploy_function "oauth2_id_token" &
+    deploy_function "oauth2_login" &
     deploy_function "get_gps" &
     deploy_function "get_user_names" &
     deploy_function "post_gps" &

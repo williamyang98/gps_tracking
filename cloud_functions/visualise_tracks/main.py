@@ -12,6 +12,4 @@ def visualise_tracks(req: flask.Request) -> flask.typing.ResponseReturnValue:
     file_path = req.path
     if file_path.startswith("/"):
         file_path = file_path[1:]
-    if file_path == "":
-        file_path = "index.html"
     return flask.send_from_directory(STATIC_DIR, file_path)

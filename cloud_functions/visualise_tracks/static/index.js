@@ -32,11 +32,20 @@ const get_battery_symbol = (percentage, is_charging) => {
   }
 }
 
+const is_status_code_unauthorized = (status_code) => {
+  switch (status_code) {
+    case 401: return true;
+    case 403: return true;
+    default: return false;
+  }
+}
+
 export const GOOGLE_MAP_API_KEY_INDEX = "google_maps_api_key";
 
 export class App {
   constructor() {
     this.elems = {
+      "login_button": document.getElementById("login_button"),
       "map": document.getElementById("map"),
       "user_list": document.getElementById("user_list"),
       "user_list_refresh": document.getElementById("user_list_refresh"),
@@ -91,7 +100,47 @@ export class App {
     this.selected_marker_index = null;
     this.bind_controls();
     this.persist_settings();
+    this.attempt_login();
     this.load_users();
+  }
+
+  log_out = () => {
+    localStorage.removeItem("id_token");
+    this.elems.login_button.innerText = "Log in";
+    this.elems.user_list_refresh.disabled = true;
+    this.elems.gps_points_refresh.disabled = true;
+  }
+
+  set_logged_in = () => {
+    this.elems.login_button.innerText = "Log out";
+    this.elems.user_list_refresh.disabled = false;
+  }
+
+  attempt_login = () => {
+    if (this.is_logged_in()) {
+      this.set_logged_in();
+    } else {
+      this.log_out();
+    }
+
+    let params = new URLSearchParams(window.location.search);
+    let auth_code = params.get("code");
+    if (auth_code === null) return;
+    let res = GpsApi.get_id_token(auth_code);
+    res
+      .then((id_token) => {
+        localStorage.setItem("id_token", id_token);
+        this.set_logged_in();
+        // Redirect to same page but without authentication code
+        // This way we cant accidentally refresh and end up using a already used authorization code
+        const REDIRECT_URL = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+        window.location.href = REDIRECT_URL;
+      })
+      .catch((ex) => {
+        console.error(`Failed to get id_token: ${ex}`);
+        this.log_out();
+        alert("Authorization token was invalid");
+      })
   }
 
   format_unix_time = (unix_time_millis) => {
@@ -160,12 +209,31 @@ export class App {
     persist_checked_input(elems.show_info_close, "show_info_close", false);
   }
 
+  is_logged_in = () => {
+    return localStorage.getItem("id_token") !== null;
+  }
+
   bind_controls = () => {
+    this.elems.login_button.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (this.is_logged_in()) {
+        let is_confirm = confirm("Are you sure you want to log out?");
+        if (is_confirm) {
+          this.log_out();
+        }
+      } else {
+        let login_url = GpsApi.get_login_url();
+        window.location.href = login_url;
+      }
+    });
+    // When website is loading this button is disabled
+    this.elems.login_button.disabled = false;
     this.elems.user_list.addEventListener("change", (ev) => {
       let id = Number(ev.target.value);
       let user = this.users.find(user => user.id == id);
       if (user !== undefined) {
         this.selected_user = user;
+        this.elems.gps_points_refresh.disabled = false;
         this.load_user(user.id);
       }
     });
@@ -208,7 +276,24 @@ export class App {
   }
 
   load_users = async () => {
-    let users = await GpsApi.get_users();
+    let id_token = localStorage.getItem("id_token");
+    if (id_token === null) {
+      console.error("Missing id token");
+      return;
+    }
+    var users = null;
+    try {
+      users = await GpsApi.get_users(id_token);
+    } catch (response) {
+      if (is_status_code_unauthorized(response.status)) {
+        this.log_out();
+        alert("Failed to fetch list of users because current login session was unauthorized");
+      } else {
+        console.error("GpsApi.get_users(...) failed with unhandled error");
+        console.error(response);
+      }
+      return;
+    }
     this.users = users;
     let option_elems = users.map(user => {
       let elem = document.createElement("option");
@@ -236,8 +321,25 @@ export class App {
   }
 
   load_user = async (user_id) => {
+    let id_token = localStorage.getItem("id_token");
+    if (id_token === null) {
+      console.error("Missing id token");
+      return;
+    }
     let max_rows = Number(this.elems.settings.max_rows.value);
-    let gps_points = await GpsApi.get_gps({ user_id, max_rows });
+    var gps_points = null;
+    try {
+      gps_points = await GpsApi.get_gps({ user_id, id_token, max_rows });
+    } catch (response) {
+      if (is_status_code_unauthorized(response.status)) {
+        this.log_out();
+        alert("Failed to fetch gps data because current login session was unauthorized");
+      } else {
+        console.error("GpsApi.get_gps(...) failed with unhandled error");
+        console.error(response);
+      }
+      return;
+    }
     // create html table
     let elem = this.elems.gps_points;
     elem.replaceChildren();
