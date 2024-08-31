@@ -15,16 +15,17 @@ Google datastore configuration.
     - Make sure ```Database ID``` is ```(default)``` so you can use free tier.
 2. Update database index: ```gcloud datastore indexes create ./index.yaml```
 
-# Plotting track with GPS Visualiser
-## Download track data
+# (Alternative) Plotting track with GPS Visualiser
+Instead of using the visualiser website we can export data for third party apps.
+
 1. Download datastore as csv: ```python ./export_datastore.py```.
 2. Convert to track format: ```python ./convert_to_track_format.py```.
-
-## Upload track data
-1. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
-2. Make sure there are no restrictions to referall URL or usage type.
-4. Upload converted track csv to [GPS_Visualiser](https://www.gpsvisualizer.com/map_input?form=html&format=google).
-5. (Optional) Copy Google maps api key.
+3. Open [GPS_Visualiser](https://www.gpsvisualizer.com/map_input?form=html&format=google)
+4. Get a Google maps javascript api key
+    - Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
+    - Make sure there are no restrictions to referall URL or usage type.
+    - Copy the key into the options page.
+5. Upload converted track csv.
 6. Setup options according to screenshot.
 7. Press ```Draw the map```.
 

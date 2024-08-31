@@ -16,9 +16,8 @@ A free and open source Android GPS tracking app that leverages Google cloud for 
 
 # Gallery
 ## Android App
-1. Set the ```user_id``` and ```user_name``` in the settings screen.
-2. After you have setup your Google cloud server endpoints copy the URL to the settings screen.
-3. Register phone by going to the ```location``` screen and pressing the user icon (Refer to screenshot).
+For usage instructions read ```/android_app/README.md``` **after** you have setup your Google cloud project. Refer to ```SETUP.md``` for how to do this. 
+
 ![app_home](./docs/android_app/0_home.jpg)
 ![app_timeline](./docs/android_app/1_timeline.jpg)
 ![app_location](./docs/android_app/2_location.jpg)
@@ -26,7 +25,7 @@ A free and open source Android GPS tracking app that leverages Google cloud for 
 ![app_settings](./docs/android_app/4_settings.jpg)
 
 ## GPS Plotting website
-![gps_plotter](./docs/local_visualiser.png)
+![gps_plotter](./docs/website/finished.png)
 
 ## Third party GPS Visualiser website
 - You can export the GPS data and visualise it on any GPS visualisation website

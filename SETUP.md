@@ -17,25 +17,14 @@
     - ```/cloud_functions``` also requires additional variables to be added to ```setup_env.sh```.
     - Every time you are developing or editing this project make sure to run this script to setup environment variables
     - NOTE: This requires a bash shell (or git-bash shell): ```source ./setup_env.sh```
-- Refer to ```/cloud_functions``` and ```/datastore``` for additional initial setup and deployment instructions.
-- Refer to ```/android_app``` for instructions on how to install or build Android app.
+- Refer to the following sections and their ```README.md``` to setup each part of the project in the correct order.
+    1. ```/datastore```: Setup database for storing GPS data points.
+    2. ```/cloud_functions```: Setup server endpoints for receiving and serving GPS data points.
+    3. ```/android_app```: Installation instructions and optional build instructions for Android app.
 
-## Links to gcloud admin console
+## Useful links to gcloud admin console
 - [Cloud Functions](https://console.cloud.google.com/functions/list)
 - [Datastore](https://console.cloud.google.com/datastore/databases/-default-/)
 - [OAuth2 Consent Screen](https://console.cloud.google.com/apis/credentials/consent)
 - [OAuth2 Credentials](https://console.cloud.google.com/apis/credentials)
-
-# Plotting track with website
-1. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
-2. Copy the api key into the visualiser when it prompts for it.
-
-## Serving website from gcloud 
-1. Go to dashboard: [Cloud functions](https://console.cloud.google.com/functions/list)
-2. Get URL for ```/visualise_tracks/``` endpoint.
-
-## Deploying website locally
-1. Start local test server: ```python ./cloud_functions/test_local.py```.
-2. Open visualiser: [Local URL](http://localhost:5000/visualise_tracks/index.html)
-
-![Local visualiser](./docs/local_visualiser.png)
+- [Google Maps Javascript API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com)
