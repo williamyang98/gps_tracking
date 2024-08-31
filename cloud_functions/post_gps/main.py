@@ -16,6 +16,7 @@ GPS_Data = namedtuple("GPS_Data", [
     "speed", "speed_accuracy",
     "bearing", "bearing_accuracy",
 ])
+exclude_fields_from_index = GPS_Data._fields[1:]
 def decode_gps_data(encode_data):
     gps_data_list = []
     extension_format = [
@@ -105,7 +106,7 @@ def post_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
     with client.transaction():
         key = client.key("gps")
         for gps_data in gps_data_list:
-            entry = datastore.Entity(key)
+            entry = datastore.Entity(key, exclude_from_indexes=exclude_fields_from_index)
             data = gps_data._asdict()
             data["user_id"] = user_id
             data = { k:v for k,v in data.items() if v != None }
