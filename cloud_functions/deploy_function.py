@@ -7,9 +7,12 @@ import subprocess
 import sys
 
 def get_runtime_args():
+    deploy_region = os.environ.get("DEPLOY_REGION", None)
+    if deploy_region == None:
+        raise Exception("Missing environment key DEPLOY_REGION used for deploying gcloud function")
     return [
         "--trigger-http",
-        "--region", "australia-southeast1",
+        "--region", deploy_region,
         "--runtime", "python310",
         "--gen2",
         "--memory", "128Mi",
@@ -103,7 +106,7 @@ def join_process(name, process):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("endpoint", nargs="?", default=None, type=str)
+    parser.add_argument("endpoints", nargs="*", default=[], type=str)
     parser.add_argument("--list", action="store_true", default=False)
     args = parser.parse_args()
 
@@ -113,20 +116,22 @@ def main():
             print(f"- {name}")
         return 0
 
-    endpoint = args.endpoint
+    endpoints = [e for e in args.endpoints]
+    for name in endpoints:
+        if not name in REGISTERED_ENDPOINTS:
+            raise Exception(f"No endpoint named '{name}'. Use --list to show valid endpoints")
+    if len(endpoints) == 0:
+        endpoints = REGISTERED_ENDPOINTS.keys()
 
     gcloud_path = shutil.which("gcloud")
     if gcloud_path == None:
         raise Exception(f"gcloud executable is missing from path")
 
     processes = []
-    if endpoint == None:
-        for name in REGISTERED_ENDPOINTS:
-            process = launch_endpoint(gcloud_path, name)
-            processes.append((name, process))
-    else:
-        process = launch_endpoint(gcloud_path, endpoint)
-        processes.append((endpoint, process))
+    print(f"Deploying {len(endpoints)} endpoints")
+    for name in endpoints:
+        process = launch_endpoint(gcloud_path, name)
+        processes.append((name, process))
 
     total_threads = len(processes)
     with ThreadPoolExecutor(total_threads) as executor:
