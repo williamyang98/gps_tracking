@@ -21,7 +21,7 @@ th, td {
 }
 
 .timeline-controls {
-  min-width: calc(min(90%, 300px));
+  min-width: calc(min(50%, 300px));
   max-width: 75%;
   text-align: center;
   background: white;
@@ -29,6 +29,7 @@ th, td {
   padding: 0.5rem;
   padding-bottom: 1rem;
   filter: drop-shadow(0 0 0.25rem #888888);
+  bottom: 15px !important;
 }
 
 .timeline-controls label {
