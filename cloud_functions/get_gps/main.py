@@ -49,25 +49,38 @@ def get_gps(req: flask.Request) -> flask.typing.ResponseReturnValue:
         try:
             user_id = int(user_id)
         except:
-            return "User_id must be an integer", HTTPStatus.BAD_REQUEST
+            return "user_id must be an integer", HTTPStatus.BAD_REQUEST
 
     download_name = req.args.get("download", None)
     MAX_DOWNLOAD_NAME = 128
     if download_name != None and len(download_name) > MAX_DOWNLOAD_NAME:
-        return f"Download name must be less than {MAX_DOWNLOAD_NAME} characters", HTTPStatus.BAD_REQUEST
+        return f"download name must be less than {MAX_DOWNLOAD_NAME} characters", HTTPStatus.BAD_REQUEST
 
     DEFAULT_MAX_ROWS = 25
     max_rows = req.args.get("max_rows", DEFAULT_MAX_ROWS)
     try:
         max_rows = int(max_rows)
     except:
-        return "Max rows must be an integer", HTTPStatus.BAD_REQUEST
+        return "max_rows must be an integer", HTTPStatus.BAD_REQUEST
+    if max_rows <= 0:
+        return "max_rows must be a positive non zero integer", HTTPStatus.BAD_REQUEST
+
+    older_than_millis = req.args.get("older_than_millis", None)
+    if older_than_millis != None:
+        try:
+            older_than_millis = int(older_than_millis)
+        except:
+            return "older_than_millis must be an integer", HTTPStatus.BAD_REQUEST
+        if older_than_millis <= 0:
+            return "older_than_millis must be a positive non zero integer", HTTPStatus.BAD_REQUEST
 
     client = datastore.Client(os.environ["PROJECT_ID"])
     query = client.query(kind="gps")
     if user_id != None:
         query.add_filter(filter=datastore.query.PropertyFilter("user_id", "=", user_id))
     query.order = ["-unix_time_millis"]
+    if older_than_millis != None:
+        query.add_filter(filter=datastore.query.PropertyFilter("unix_time_millis", "<", older_than_millis))
     results = query.fetch(limit=max_rows)
 
     def create_csv(results):

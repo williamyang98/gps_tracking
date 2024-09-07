@@ -20,6 +20,22 @@ th, td {
   height: 100%;
 }
 
+.timeline-controls {
+  min-width: calc(min(90%, 300px));
+  max-width: 75%;
+  text-align: center;
+  background: white;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  padding-bottom: 1rem;
+  filter: drop-shadow(0 0 0.25rem #888888);
+}
+
+.timeline-controls label {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
 tr.selected {
   background-color: aqua;
 }

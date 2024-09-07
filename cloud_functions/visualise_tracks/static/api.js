@@ -67,11 +67,14 @@ export class User {
 }
 
 export class GpsApi {
-  static get_gps = async ({ user_id, id_token, max_rows=128 }) => {
+  static get_gps = async ({ user_id, id_token, older_than_millis=null, max_rows=128 }) => {
     const GPS_API_URL = window.location.origin;
     let params = [];
     params.push(`user_id=${encodeURIComponent(user_id)}`);
     params.push(`max_rows=${encodeURIComponent(max_rows)}`);
+    if (older_than_millis !== null) {
+      params.push(`older_than_millis=${encodeURIComponent(older_than_millis)}`);
+    }
     let base_url = `${GPS_API_URL}/get_gps`;
     let url = `${base_url}?${params.join("&")}`;
     let response = await fetch(url, {

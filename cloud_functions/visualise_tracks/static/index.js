@@ -42,6 +42,18 @@ const is_status_code_unauthorized = (status_code) => {
 
 export const GOOGLE_MAP_API_KEY_INDEX = "google_maps_api_key";
 
+const create_timeline_control = () => {
+  let elem = document.createElement("input");
+  elem.classList.add("w-100");
+  elem.id = "timeline_control";
+  elem.type = "range";
+  elem.min = "0";
+  elem.max = "1";
+  elem.value = "0";
+  elem.step = "1";
+  return elem;
+}
+
 export class App {
   constructor() {
     this.elems = {
@@ -57,12 +69,13 @@ export class App {
       "gps_points_show_all": document.getElementById("gps_points_show_all"),
       "gps_points_refresh": document.getElementById("gps_points_refresh"),
       "gps_points_render": document.getElementById("gps_points_render"),
-      "timeline_control_container": document.getElementById("timeline_control_container"),
-      "timeline_control": document.getElementById("timeline_control"),
+      "timeline_control": create_timeline_control(),
       "settings": {
         "max_rows": document.getElementById("settings_max_rows"),
+        "before_datetime": document.getElementById("settings_before_datetime"),
         "api_key": document.getElementById("settings_api_key"),
         "zoom_level": document.getElementById("settings_zoom_level"),
+        "stroke_coloured": document.getElementById("settings_stroke_coloured"),
         "stroke_hue": document.getElementById("settings_stroke_hue"),
         "stroke_weight": document.getElementById("settings_stroke_weight"),
         "stroke_weight_falloff": document.getElementById("settings_stroke_weight_falloff"),
@@ -102,8 +115,20 @@ export class App {
     this.selected_marker_index = null;
     this.bind_controls();
     this.persist_settings();
+    this.create_map_controls();
     this.attempt_login();
     this.load_users();
+  }
+
+  create_map_controls = () => {
+    let control = this.elems.timeline_control;
+    let parent_div = document.createElement("div");
+    parent_div.classList.add("timeline-controls");
+    let label = document.createElement("label");
+    label.innerText = "Timeline";
+    parent_div.appendChild(label);
+    parent_div.appendChild(control);
+    this.map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(parent_div);
   }
 
   log_out = () => {
@@ -197,11 +222,12 @@ export class App {
     persist_number_input(elems.max_rows, "max_rows", 25);
     persist_string_input(elems.api_key, GOOGLE_MAP_API_KEY_INDEX, "");
     persist_number_input(elems.zoom_level, "zoom_level", 20);
+    persist_checked_input(elems.stroke_coloured, "stroke_coloured", true);
     persist_number_input(elems.stroke_hue, "stroke_hue", 0.7);
     persist_number_input(elems.stroke_weight, "stroke_weight", 6);
     persist_number_input(elems.stroke_weight_falloff, "stroke_weight_falloff", 0.25);
     persist_number_input(elems.stroke_opacity, "stroke_opacity", 1);
-    persist_number_input(elems.stroke_opacity_falloff, "stroke_opacity", 0.75);
+    persist_number_input(elems.stroke_opacity_falloff, "stroke_opacity_falloff", 0.75);
     persist_number_input(elems.marker_size, "marker_size", 8);
     persist_number_input(elems.marker_size_falloff, "marker_size_falloff", 0.25);
     persist_number_input(elems.marker_opacity, "marker_opacity", 1);
@@ -277,7 +303,17 @@ export class App {
     });
   }
 
-  load_users = async () => {
+  load_users = async() => {
+    this.elems.user_list_refresh.disabled = true;
+    try {
+      await this._load_users();
+    } catch (ex) {
+      console.error(`Failed to load users: ${ex}`);
+    }
+    this.elems.user_list_refresh.disabled = false;
+  }
+
+  _load_users = async () => {
     let id_token = localStorage.getItem("id_token");
     if (id_token === null) {
       console.error("Missing id token");
@@ -324,15 +360,35 @@ export class App {
   }
 
   load_user = async (user_id) => {
+    this.elems.gps_points_refresh.disabled = true;
+    try {
+      await this._load_user(user_id);
+    } catch (ex) {
+      console.error(`Failed to refresh gps points: ${ex}`);
+    } 
+    this.elems.gps_points_refresh.disabled = false;
+  }
+
+  _load_user = async (user_id) => {
     let id_token = localStorage.getItem("id_token");
     if (id_token === null) {
       console.error("Missing id token");
       return;
     }
     let max_rows = Number(this.elems.settings.max_rows.value);
+    let before_datetime_string = this.elems.settings.before_datetime.value;
+    var older_than_millis = null;
+    if (before_datetime_string !== '') {
+      try {
+        let date = new Date(before_datetime_string);
+        older_than_millis = date.getTime();
+      } catch (ex) {
+        console.error(`Failed to read before_datetime string: ${ex}`);
+      }
+    }
     var gps_points = null;
     try {
-      gps_points = await GpsApi.get_gps({ user_id, id_token, max_rows });
+      gps_points = await GpsApi.get_gps({ user_id, id_token, older_than_millis, max_rows });
     } catch (response) {
       if (is_status_code_unauthorized(response.status)) {
         this.log_out();
@@ -395,6 +451,7 @@ export class App {
     };
 
     let zoom_level = Number(this.elems.settings.zoom_level.value);
+    let stroke_coloured = this.elems.settings.stroke_coloured.checked;
     let stroke_hue = Number(this.elems.settings.stroke_hue.value);
     let stroke_weight = Number(this.elems.settings.stroke_weight.value);
     let stroke_weight_falloff = Number(this.elems.settings.stroke_weight_falloff.value);
@@ -418,26 +475,38 @@ export class App {
       return colour;
     });
 
-    this.map_lines = map_points
-      .slice(0,-1)
-      .map((_, index) => {
-        index = map_points.length-index-2;
-        let point = map_points[index];
-        let other_point = map_points[index+1];
-        let amount = step*index;
-        let weight = stroke_weight*(1-amount*stroke_weight_falloff);
-        let opacity = stroke_opacity*(1-amount*stroke_opacity_falloff);
-        let line = new google.maps.Polyline({
-          path: [point, other_point],
-          geodesic: true,
-          strokeColor: colours[index],
-          strokeOpacity: opacity,
-          strokeWeight: weight,
-        });
-        line.setMap(map);
-        return line;
-      })
-      .reverse();
+    if (stroke_coloured) {
+      this.map_lines = map_points
+        .slice(0,-1)
+        .map((_, index) => {
+          index = map_points.length-index-2;
+          let point = map_points[index];
+          let other_point = map_points[index+1];
+          let amount = step*index;
+          let weight = stroke_weight*(1-amount*stroke_weight_falloff);
+          let opacity = stroke_opacity*(1-amount*stroke_opacity_falloff);
+          let line = new google.maps.Polyline({
+            path: [point, other_point],
+            geodesic: true,
+            strokeColor: colours[index],
+            strokeOpacity: opacity,
+            strokeWeight: weight,
+          });
+          line.setMap(map);
+          return line;
+        })
+        .reverse();
+    } else {
+      let line = new google.maps.Polyline({
+        path: map_points,
+        geodesic: true,
+        strokeColor: "#444444",
+        strokeWeight: stroke_weight,
+        strokeOpacity: stroke_opacity,
+      });
+      line.setMap(map);
+      this.map_lines = [line];
+    }
 
     this.map_markers = gps_points
       .map((_, index) => {
