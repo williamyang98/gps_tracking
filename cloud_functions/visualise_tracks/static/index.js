@@ -40,6 +40,16 @@ const is_status_code_unauthorized = (status_code) => {
   }
 }
 
+const convert_row_to_api_position = (row) => {
+  let pos = {};
+  pos.lat = row.latitude;
+  pos.lng = row.longitude;
+  if (row.altitude !== null) {
+    pos.altitude = row.altitude;
+  }
+  return pos;
+}
+
 export const GOOGLE_MAP_API_KEY_INDEX = "google_maps_api_key";
 
 const create_timeline_control = () => {
@@ -426,7 +436,7 @@ export class App {
       return row_elem;
     });
     this.gps_points = gps_points;
-    this.map_points = gps_points.map(row => { return { lat: row.latitude, lng: row.longitude }; });
+    this.map_points = gps_points.map(convert_row_to_api_position);
     // render track on map
     this.elems.timeline_control.min = 0;
     this.elems.timeline_control.max = Math.max(gps_points.length-1, 0);
@@ -518,7 +528,7 @@ export class App {
         let fill_opacity = marker_opacity*(1-amount*marker_opacity_falloff);
         let marker = new google.maps.Marker({
           map: map,
-          position: { lat: row.latitude, lng: row.longitude },
+          position: convert_row_to_api_position(row),
           title: this.format_unix_time(row.unix_time_millis),
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
