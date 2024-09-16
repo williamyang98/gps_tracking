@@ -19,7 +19,8 @@ def main():
         unix_time = int(time.time())
         seconds_in_day = 60*60*24
         cutoff_time = unix_time - args.older_than_days*seconds_in_day
-        query.add_filter(filter=datastore.query.PropertyFilter("unix_time", "<", cutoff_time))
+        cutoff_time_millis = cutoff_time*1000
+        query.add_filter(filter=datastore.query.PropertyFilter("unix_time_millis", "<", cutoff_time_millis))
     query.order = ["-unix_time_millis"]
     results = query.fetch()
 

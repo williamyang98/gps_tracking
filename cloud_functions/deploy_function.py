@@ -11,7 +11,6 @@ def get_runtime_args():
     if deploy_region == None:
         raise Exception("Missing environment key DEPLOY_REGION used for deploying gcloud function")
     return [
-        "--trigger-http",
         "--region", deploy_region,
         "--runtime", "python310",
         "--gen2",
@@ -46,46 +45,66 @@ def register_endpoint(name):
         return endpoint
     return decorator
 
-def allow_unauthenticated(endpoint):
-    @functools.wraps(endpoint)
-    def wrapper():
-        args = endpoint()
-        args.append("--allow-unauthenticated")
-        return args
-    return wrapper
+def create_options_decorator(options):
+    def decorator(endpoint):
+        @functools.wraps(endpoint)
+        def wrapper():
+            args = endpoint()
+            args.extend(options)
+            return args
+        return wrapper
+    return decorator
+
+allow_unauthenticated = create_options_decorator(["--allow-unauthenticated"])
+trigger_http = create_options_decorator([("--trigger-http")])
+
+def trigger_topic(topic):
+    return create_options_decorator(["--trigger-topic", topic])
 
 @register_endpoint("oauth2_id_token")
 @allow_unauthenticated
+@trigger_http
 def endpoint_oauth2_id_token():
     return create_environment_args(["OAUTH2_CLIENT_ID", "OAUTH2_CLIENT_SECRET"])
 
 @register_endpoint("oauth2_login")
 @allow_unauthenticated
+@trigger_http
 def endpoint_oauth2_login():
     return create_environment_args(["OAUTH2_CLIENT_ID"])
 
 @register_endpoint("get_gps")
+@trigger_http
 def endpoint_get_gps():
     return create_environment_args(["PROJECT_ID"])
 
 @register_endpoint("get_user_names")
+@trigger_http
 def endpoint_get_user_names():
     return create_environment_args(["PROJECT_ID"])
 
 @register_endpoint("post_gps")
 @allow_unauthenticated
+@trigger_http
 def endpoint_post_gps():
     return create_environment_args(["PROJECT_ID"])
 
 @register_endpoint("register_user_name")
 @allow_unauthenticated
+@trigger_http
 def endpoint_register_user_name():
     return create_environment_args(["PROJECT_ID"])
 
 @register_endpoint("visualise_tracks")
 @allow_unauthenticated
+@trigger_http
 def endpoint_visualise_tracks():
     return []
+
+@register_endpoint("prune_datastore")
+@trigger_topic("prune-datastore")
+def endpoint_prune_datastore():
+    return create_environment_args(["PROJECT_ID"])
 
 def launch_endpoint(gcloud_path, name):
     endpoint = REGISTERED_ENDPOINTS.get(name, None)

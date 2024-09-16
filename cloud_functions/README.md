@@ -27,8 +27,16 @@
     - Redirect uri: ```https://[YOUR_CLOUD_FUNCTION_URL]/visualise_tracks/index.html```
 7. Enable [Google maps API](https://console.cloud.google.com/marketplace/product/google/maps-backend.googleapis.com).
     - Copy the api key down for future use in the visualiser webpage.
+8. Create cloud scheduler job for auto pruning old GPS entries.
+    - Create job at [Cloud Scheduler](https://console.cloud.google.com/cloudscheduler).
+    - Set frequency to ```0 0 1 * *``` to trigger at start of once a month.
+    - Set target type as ```Pub/Sub```.
+    - Create and assign to cloud pub/sub topic called: ```prune-datastore```.
+    - Add a message attribute called: ```older_than_days``` with the number of days before an entry is removed.
+    - Enable [Eventarc Api](https://console.cloud.google.com/apis/api/eventarc.googleapis.com).
 
 ![Oauth2 client credentials](../docs/gcloud/oauth2_credentials.png)
+![Cloud scheduler job](../docs/gcloud/cloud_job_scheduler.png)
 
 ## Opening deployed website
 1. Go to [Cloud Functions](https://console.cloud.google.com/functions/list).
